@@ -7,6 +7,8 @@ import {InsightError, NotFoundError} from "./IInsightFacade";
  * Method documentation is in IInsightFacade
  *
  */
+
+// muhan branch
 export default class InsightFacade implements IInsightFacade {
 
     constructor() {
