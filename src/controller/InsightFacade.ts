@@ -7,7 +7,6 @@ import {JSZipObject} from "jszip";
 import {promises} from "dns";
 
 
-
 /**
  * This is the main programmatic entry point for the project.
  * Method documentation is in IInsightFacade
