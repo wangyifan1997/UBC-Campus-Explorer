@@ -1,25 +1,37 @@
 import { expect } from "chai";
 import * as fs from "fs-extra";
-import {InsightDatasetKind} from "../src/controller/IInsightFacade";
+import {
+    InsightDataset,
+    InsightDatasetKind,
+    InsightError,
+} from "../src/controller/IInsightFacade";
 import InsightFacade from "../src/controller/InsightFacade";
 import Log from "../src/Util";
 import TestUtil from "./TestUtil";
+import { NotFoundError } from "restify";
 
 // This should match the schema given to TestUtil.validate(..) in TestUtil.readTestQueries(..)
 // except 'filename' which is injected when the file is read.
 export interface ITestQuery {
     title: string;
-    query: any;  // make any to allow testing structurally invalid queries
+    query: any; // make any to allow testing structurally invalid queries
     isQueryValid: boolean;
     result: any;
-    filename: string;  // This is injected when reading the file
+    filename: string; // This is injected when reading the file
 }
 
-describe("InsightFacade Add/Remove/List Dataset", function () {
+describe("InsightFacade Add/Remove Dataset", function () {
     // Reference any datasets you've added to test/data here and they will
     // automatically be loaded in the 'before' hook.
     const datasetsToLoad: { [id: string]: string } = {
         courses: "./test/data/courses.zip",
+        courses01: "./test/data/courses01.zip",
+        empty: "./test/data/empty.zip",
+        corrupted: "./test/data/corrupted.zip",
+        notAPropZip: "./test/data/notAPropZip.zip",
+        notAZip: "./test/data/notAZip.txt",
+        containPDF: "./test/data/containPDF.zip",
+        containTEXT: "./test/data/containTEXT.zip",
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
@@ -30,7 +42,9 @@ describe("InsightFacade Add/Remove/List Dataset", function () {
         // into the datasets object
         Log.test(`Before all`);
         for (const id of Object.keys(datasetsToLoad)) {
-            datasets[id] = fs.readFileSync(datasetsToLoad[id]).toString("base64");
+            datasets[id] = fs
+                .readFileSync(datasetsToLoad[id])
+                .toString("base64");
         }
     });
 
@@ -59,12 +73,580 @@ describe("InsightFacade Add/Remove/List Dataset", function () {
     it("Should add a valid dataset", function () {
         const id: string = "courses";
         const expected: string[] = [id];
-        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
-            expect(result).to.deep.equal(expected);
-        }).catch((err: any) => {
-            expect.fail(err, expected, "Should not have rejected");
-        });
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            })
+            .catch((err: any) => {
+                expect.fail(err, expected, "Should not have rejected");
+            });
+    });
 
+    // Add corrupted zip
+    it("Should add a corrupted zip dataset", function () {
+        const id: string = "corrupted";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // Add empty zip
+    it("Should add a empty zip dataset", function () {
+        const id: string = "empty";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // Add notAPropZip zip
+    it("Should add a notAPropZip zip dataset", function () {
+        const id: string = "notAPropZip";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // Add containPDF zip
+    it("Should add a containPDF zip dataset", function () {
+        const id: string = "containPDF";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // Add containTEXT zip
+    it("Should add a containTEXT zip dataset", function () {
+        const id: string = "containTEXT";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // Add notAZip txt
+    it("Should add a notAZip zip dataset", function () {
+        const id: string = "notAZip";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // Valid add
+    it("Should add a number key valid dataset", function () {
+        const key: string = "10";
+        const expected: string[] = [key];
+        return insightFacade
+            .addDataset(key, datasets["courses"], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            })
+            .catch((err: any) => {
+                expect.fail(err, expected, "Should not have rejected");
+            });
+    });
+
+    // Multiple add
+    it("Should add some valid datasets", function () {
+        const id: string = "courses";
+        const id01: string = "courses01";
+        const expected: string[] = [id, id01];
+        insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses);
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .addDataset(id01, datasets[id], InsightDatasetKind.Courses)
+                    .then((result: string[]) => {
+                        expect(result).to.deep.equal(expected);
+                    })
+                    .catch((err: any) => {
+                        expect.fail(err, expected, "Should not have rejected");
+                    });
+            });
+    });
+
+    // False add
+    it("Should add a whitespace false valid dataset", function () {
+        const id: string = " ";
+        return insightFacade
+            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should add a underscore false valid dataset", function () {
+        const id: string = "_";
+        return insightFacade
+            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should add a repeated false valid dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+                    .then((result: string[]) => {
+                        expect.fail(result, "Should not have resolved");
+                    })
+                    .catch((err: any) => {
+                        expect(err).to.equal(InsightError);
+                    });
+            });
+    });
+
+    // False add
+    it("Should add a null key false valid dataset", function () {
+        const id: string = "";
+        return insightFacade
+            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should add some keys false valid dataset", function () {
+        const id: string = " _";
+        return insightFacade
+            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should add undefined key false valid dataset", function () {
+        const id: string = undefined;
+        return insightFacade
+            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should pass in false dataset value", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, "string", InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should pass in false dataset value", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, "", InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should pass in false dataset value", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, " ", InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should pass in false dataset value", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, undefined, InsightDatasetKind.Courses)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // False add
+    it("Should pass in false kind value", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], undefined)
+            .then((result: string[]) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.equal(InsightError);
+            });
+    });
+
+    // Simple remove
+    it("Should remove a valid dataset", function () {
+        const id: string = "courses";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .removeDataset(id)
+                    .then((result: string) => {
+                        expect(result).to.deep.equal(expected);
+                    })
+                    .catch((err: any) => {
+                        expect.fail(err, "Should not have rejected");
+                    });
+            });
+    });
+
+    // Multiple remove
+    it("Should remove multiple valid datasets", function () {
+        const id: string = "courses";
+        const id01: string = "courses01";
+        const expected: string[] = [id];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .addDataset(id01, datasets[id], InsightDatasetKind.Courses)
+                    .then(() => {
+                        return insightFacade.removeDataset(id01).then(() => {
+                            return insightFacade
+                                .removeDataset(id)
+                                .then((result: string) => {
+                                    expect(result).to.deep.equal(expected);
+                                })
+                                .catch((err: any) => {
+                                    expect.fail(
+                                        err,
+                                        "Should not have rejected",
+                                    );
+                                });
+                        });
+                    });
+            });
+    });
+
+    // Multiple remove
+    it("Should remove multiple valid datasets01", function () {
+        const id: string = "courses";
+        const id01: string = "courses01";
+        const expected: string[] = [id01];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .addDataset(id01, datasets[id], InsightDatasetKind.Courses)
+                    .then(() => {
+                        return insightFacade.removeDataset(id).then(() => {
+                            return insightFacade
+                                .removeDataset(id01)
+                                .then((result: string) => {
+                                    expect(result).to.deep.equal(expected);
+                                })
+                                .catch((err: any) => {
+                                    expect.fail(
+                                        err,
+                                        "Should not have rejected",
+                                    );
+                                });
+                        });
+                    });
+            });
+    });
+
+    // Multiple remove
+    it("Should remove multiple valid datasets02", function () {
+        const id: string = "courses";
+        const id01: string = "courses01";
+        const expected: string[] = [id01];
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade.removeDataset(id).then(() => {
+                    return insightFacade.removeDataset(id).then(() => {
+                        return insightFacade
+                            .addDataset(
+                                id01,
+                                datasets[id],
+                                InsightDatasetKind.Courses,
+                            )
+                            .then(() => {
+                                return insightFacade
+                                    .removeDataset(id01)
+                                    .then((result: string) => {
+                                        expect(result).to.deep.equal(expected);
+                                    })
+                                    .catch((err: any) => {
+                                        expect.fail(
+                                            err,
+                                            "Should not have rejected",
+                                        );
+                                    });
+                            });
+                    });
+                });
+            });
+    });
+
+    // Empty false remove
+    it("Should remove an empty dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .removeDataset(id)
+            .then((result: string) => {
+                expect.fail(result, "Should not have resolved");
+            })
+            .catch((err: any) => {
+                expect(err).to.be.oneOf([InsightError, NotFoundError]);
+            });
+    });
+
+    // False multiple remove
+    it("Should add then remove invalid dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade.removeDataset(id).then(() => {
+                    return insightFacade
+                        .removeDataset(id)
+                        .then((result: string) => {
+                            expect.fail(result, "Should not have resolved");
+                        })
+                        .catch((err: any) => {
+                            expect(err).to.be.oneOf([
+                                InsightError,
+                                NotFoundError,
+                            ]);
+                        });
+                });
+            });
+    });
+
+    // False key remove
+    it("Should remove invalid key dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .removeDataset("false")
+                    .then((result: string) => {
+                        expect.fail(result, "Should not have resolved");
+                    })
+                    .catch((err: any) => {
+                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
+                    });
+            });
+    });
+
+    // False key remove
+    it("Should remove invalid key dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .removeDataset("_")
+                    .then((result: string) => {
+                        expect.fail(result, "Should not have resolved");
+                    })
+                    .catch((err: any) => {
+                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
+                    });
+            });
+    });
+
+    // False key remove
+    it("Should remove invalid key dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .removeDataset(" ")
+                    .then((result: string) => {
+                        expect.fail(result, "Should not have resolved");
+                    })
+                    .catch((err: any) => {
+                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
+                    });
+            });
+    });
+
+    // False key remove
+    it("Should remove invalid key dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .removeDataset("")
+                    .then((result: string) => {
+                        expect.fail(result, "Should not have resolved");
+                    })
+                    .catch((err: any) => {
+                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
+                    });
+            });
+    });
+
+    // False key remove
+    it("Should remove invalid key dataset", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .removeDataset(undefined)
+                    .then((result: string) => {
+                        expect.fail(result, "Should not have resolved");
+                    })
+                    .catch((err: any) => {
+                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
+                    });
+            });
+    });
+
+    // List datasets
+    it("Should list all datasets", function () {
+        const id: string = "courses";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .listDatasets()
+                    .then((result: InsightDataset[]) => {
+                        expect(result).to.equal([id]);
+                    })
+                    .catch((err: any) => {
+                        expect.fail(err, "Should not have resolved");
+                    });
+            });
+    });
+
+    // List some datasets
+    it("Should list all datasets", function () {
+        const id: string = "courses";
+        const id1: string = "courses01";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .addDataset(id1, datasets[id1], InsightDatasetKind.Courses)
+                    .then(() => {
+                        return insightFacade
+                            .listDatasets()
+                            .then((result: InsightDataset[]) => {
+                                expect(result).to.equal([id, id1]);
+                            })
+                            .catch((err: any) => {
+                                expect.fail(err, "Should not have resolved");
+                            });
+                    });
+            });
+    });
+
+    // List empty datasets
+    it("Should list no datasets", function () {
+        return insightFacade
+            .listDatasets()
+            .then((result: InsightDataset[]) => {
+                expect(result).to.equal([]);
+            })
+            .catch((err: any) => {
+                expect.fail(err, "Should not have resolved");
+            });
+    });
+
+    // List some datasets
+    it("Should list all datasets", function () {
+        const id: string = "courses";
+        const id1: string = "notAZip";
+        return insightFacade
+            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
+            .then(() => {
+                return insightFacade
+                    .addDataset(id1, datasets[id1], InsightDatasetKind.Courses)
+                    .then(() => {
+                        return insightFacade
+                            .listDatasets()
+                            .then((result: InsightDataset[]) => {
+                                expect(result).to.equal([id]);
+                            })
+                            .catch((err: any) => {
+                                expect.fail(err, "Should not have resolved");
+                            });
+                    });
+            });
     });
 });
 
@@ -74,8 +656,13 @@ describe("InsightFacade Add/Remove/List Dataset", function () {
  * You can still make tests the normal way, this is just a convenient tool for a majority of queries.
  */
 describe("InsightFacade PerformQuery", () => {
-    const datasetsToQuery: { [id: string]: {path: string, kind: InsightDatasetKind} } = {
-        courses: {path: "./test/data/courses.zip", kind: InsightDatasetKind.Courses},
+    const datasetsToQuery: {
+        [id: string]: { path: string; kind: InsightDatasetKind };
+    } = {
+        courses: {
+            path: "./test/data/courses.zip",
+            kind: InsightDatasetKind.Courses,
+        },
     };
     let insightFacade: InsightFacade;
     let testQueries: ITestQuery[] = [];
@@ -89,7 +676,11 @@ describe("InsightFacade PerformQuery", () => {
         try {
             testQueries = TestUtil.readTestQueries();
         } catch (err) {
-            expect.fail("", "", `Failed to read one or more test queries. ${err}`);
+            expect.fail(
+                "",
+                "",
+                `Failed to read one or more test queries. ${err}`,
+            );
         }
 
         // Load the datasets specified in datasetsToQuery and add them to InsightFacade.
@@ -99,7 +690,9 @@ describe("InsightFacade PerformQuery", () => {
         for (const id of Object.keys(datasetsToQuery)) {
             const ds = datasetsToQuery[id];
             const data = fs.readFileSync(ds.path).toString("base64");
-            loadDatasetPromises.push(insightFacade.addDataset(id, data, ds.kind));
+            loadDatasetPromises.push(
+                insightFacade.addDataset(id, data, ds.kind),
+            );
         }
         return Promise.all(loadDatasetPromises).catch((err) => {
             /* *IMPORTANT NOTE: This catch is to let this run even without the implemented addDataset,
@@ -128,11 +721,14 @@ describe("InsightFacade PerformQuery", () => {
         describe("Dynamic InsightFacade PerformQuery tests", function () {
             for (const test of testQueries) {
                 it(`[${test.filename}] ${test.title}`, function (done) {
-                    insightFacade.performQuery(test.query).then((result) => {
-                        TestUtil.checkQueryResult(test, result, done);
-                    }).catch((err) => {
-                        TestUtil.checkQueryResult(test, err, done);
-                    });
+                    insightFacade
+                        .performQuery(test.query)
+                        .then((result) => {
+                            TestUtil.checkQueryResult(test, result, done);
+                        })
+                        .catch((err) => {
+                            TestUtil.checkQueryResult(test, err, done);
+                        });
                 });
             }
         });

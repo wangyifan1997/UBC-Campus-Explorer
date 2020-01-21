@@ -1,0 +1,33 @@
+{
+    "title": "Cannot query more than one dataset_Col",
+    "query": {
+        "WHERE":{
+            "NOT":{
+                "OR":[
+                    {
+                        "LT":{
+                            "courses_avg":95
+                        }
+                    },
+                    {
+                        "IS":{
+                            "courses_title":"DATA"
+                        }
+                    }
+                ]
+            }
+        },
+        "OPTIONS":{
+            "COLUMNS":[
+                "avg_avg",
+                "courses_pass",
+                "courses_title",
+                "courses_id"
+            ],
+            "ORDER":
+            "courses_avg"
+        }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}
