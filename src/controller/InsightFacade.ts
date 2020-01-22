@@ -33,9 +33,13 @@ export default class InsightFacade implements IInsightFacade {
         });
     }
 
-    // private checkCoursesFolder(zip: JSZip): Promise<any> {
-    //
-    // }
+    private checkCoursesFolder(zipData: JSZip): Promise<any> {
+        let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
+        if (coursesFolder.length === 0) {
+            return Promise.reject(InsightError);
+        }
+        return Promise.resolve(zipData);
+    }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.isIdOk(id, content).then(() => {
@@ -46,6 +50,24 @@ export default class InsightFacade implements IInsightFacade {
         }).catch((err: any) => {
             return Promise.reject(InsightError);
         }).then((zipData: JSZip) => {
+            return this.checkCoursesFolder(zipData);
+        }).then((zipData: JSZip) => {
+            // has courses folder, start setting up all promises
+            let allFiles: string[] = [];
+            zipData.folder("courses").forEach((relativePath, file) => {
+                allFiles.push(file.name);
+            });
+            let allPromises: any[] = allFiles.map((fileDir: string) => {
+                return zipData.file(fileDir).async("text");
+            });
+            let promiseInOne: any = Promise.all(allPromises);
+            return promiseInOne;
+        }).catch((err: any) => {
+            // no courses folder, reject
+            return Promise.reject(InsightError);
+        }).then((result: string[]) => {
+            // eslint-disable-next-line no-console
+            console.log(result);
             return Promise.resolve([id]);
         });
         // if (this.isIdIllegal(id) || this.isIdAdded(id)) {
