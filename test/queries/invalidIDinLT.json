@@ -1,0 +1,19 @@
+{
+    "title": "invalid id in LT",
+    "query": {
+      "WHERE": {
+        "LT": {
+          "cour_avg": 97
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_instructor",
+          "courses_avg"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

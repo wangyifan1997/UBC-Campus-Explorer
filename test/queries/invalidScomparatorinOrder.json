@@ -1,0 +1,21 @@
+{
+    "title": "ORDER takes SCOMPARATOR",
+    "query": {
+      "WHERE": {
+        "LT": {
+          "courses_avg": 40
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_instructor",
+          "courses_avg"
+        ],
+        "ORDER": {
+          "courses_instructor": "paul"
+        }
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

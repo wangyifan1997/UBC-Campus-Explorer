@@ -1,0 +1,20 @@
+{
+    "title": "invalid type of COLUMN key",
+    "query": {
+        "WHERE": {
+          "IS": {
+            "courses_instructor": "paul"
+          }
+        },
+        "OPTIONS": {
+          "COLUMNS": [
+            {"courses_instructor": "paul"}
+          ],
+          "ORDER": 
+            "courses_instructor"
+         
+        }
+      },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

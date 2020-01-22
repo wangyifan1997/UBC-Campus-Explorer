@@ -1,0 +1,21 @@
+{
+    "title": "sfield with number",
+    "query": {
+        "WHERE": {
+            "NOT": {
+                "EQ": {
+                "courses_instructor": 97
+                }
+            }       
+        },
+        "OPTIONS": {
+            "COLUMNS": [
+                "courses_dept",
+                "courses_avg"
+            ],
+            "ORDER": "courses_avg"
+        }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

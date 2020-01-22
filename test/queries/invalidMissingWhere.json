@@ -1,5 +1,5 @@
 {
-    "title": "Very invalid query",
+    "title": "Very invalid query, missing where",
     "query": { "OPTIONS": {} },
     "isQueryValid": false,
     "result": "InsightError"
