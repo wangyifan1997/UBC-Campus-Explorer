@@ -18,9 +18,12 @@ import {promises} from "dns";
 export default class InsightFacade implements IInsightFacade {
 
     public allId: string[];
+    public allFiles: string[];
+    public fs = require("fs");
 
     constructor() {
         this.allId = [];
+        this.allFiles = [];
         Log.trace("InsightFacadeImpl::init()");
     }
 
@@ -33,49 +36,67 @@ export default class InsightFacade implements IInsightFacade {
         });
     }
 
-    private checkCoursesFolder(zipData: JSZip): Promise<any> {
-        let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
-        if (coursesFolder.length === 0) {
-            return Promise.reject(InsightError);
-        }
-        return Promise.resolve(zipData);
-    }
+    // private checkCoursesFolder(zipData: JSZip): Promise<any> {
+    //     let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
+    //     if (coursesFolder.length === 0) {
+    //         return Promise.reject(InsightError);
+    //     }
+    //     return Promise.resolve(zipData);
+    // }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.isIdOk(id, content).then(() => {
             // let idResult: string = result[0];
             // let contentResult: string = result[1];
+            // eslint-disable-next-line no-console
+            console.log("1 then block");
             let zip: JSZip = new JSZip();
             return zip.loadAsync(content, {base64: true});
-        }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-            console.log("no!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            return Promise.reject(new InsightError());
+            // }).catch((err: any) => {
+            //     // eslint-disable-next-line no-console
+            //     console.log("no!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            //     return Promise.reject(new InsightError());
         }).then((zipData: JSZip) => {
             // eslint-disable-next-line no-console
-            console.log("here!!!!!!!!!!!!!!!!!!!!");
-            return this.checkCoursesFolder(zipData);
-        }).then((zipData: JSZip) => {
+            console.log("2 then block");
+            // eslint-disable-next-line no-console
+            //     console.log("here!!!!!!!!!!!!!!!!!!!!");
+            //     return this.checkCoursesFolder(zipData);
+            // }).then((zipData: JSZip) => {
             // has courses folder, start setting up all promises
-            let allFiles: string[] = [];
+            let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
+            if (coursesFolder.length <= 0) {
+                return Promise.reject(new InsightError());
+            }
             zipData.folder("courses").forEach((relativePath, file) => {
-                allFiles.push(file.name);
+                this.allFiles.push(file.name);
             });
-            let allPromises: any[] = allFiles.map((fileDir: string) => {
+            return zipData;
+        }).then((zipData) => {
+            // eslint-disable-next-line no-console
+            console.log("3 then block");
+            let allPromises: any[] = this.allFiles.map((fileDir: string) => {
                 return zipData.file(fileDir).async("text");
             });
+            return allPromises;
+        }).then((allPromises) => {
+            // eslint-disable-next-line no-console
+            console.log("4 then block");
             let promiseInOne: any = Promise.all(allPromises);
             return promiseInOne;
-        }).catch((err: any) => {
-            // no courses folder, reject
-            return Promise.reject(new InsightError());
         }).then((result: string[]) => {
             // eslint-disable-next-line no-console
-            console.log(result);
-            this.allId.push(id);
+            console.log("5 then block");
             // eslint-disable-next-line no-console
-            console.log(this.allId);
+            // console.log(result);
+            this.allId.push(id);
+            this.allFiles = [];
             return Promise.resolve(this.allId);
+        }).catch((err: any) => {
+            // no courses folder, reject
+            // eslint-disable-next-line no-console
+            console.log("catch block");
+            return Promise.reject(new InsightError());
         });
         // if (this.isIdIllegal(id) || this.isIdAdded(id)) {
         //     // eslint-disable-next-line no-console

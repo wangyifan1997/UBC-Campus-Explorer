@@ -197,18 +197,12 @@ describe("InsightFacade Add/Remove Dataset", function () {
         }).catch((err: any) => {
             expect.fail(err, expected1, "Should not have rejected");
         }).then(() => {
-            // eslint-disable-next-line no-console
-            console.log("start!!!!!!!!");
             return insightFacade.addDataset(id2, datasets["course"], InsightDatasetKind.Courses);
         }).then((result: string[]) => {
-            // eslint-disable-next-line no-console
-            console.log("!!!!!!!!");
             expect(result).to.deep.equal(expected2);
         }).catch((err: any) => {
             // eslint-disable-next-line no-console
             console.log(err);
-            // eslint-disable-next-line no-console
-            console.log("????????");
             expect.fail(err, expected2, "Should not have rejected");
         });
     });
