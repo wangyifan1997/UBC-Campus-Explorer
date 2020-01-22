@@ -66,9 +66,10 @@ export default class InsightFacade implements IInsightFacade {
             // no courses folder, reject
             return Promise.reject(InsightError);
         }).then((result: string[]) => {
-            // eslint-disable-next-line no-console
-            console.log(result);
-            return Promise.resolve([id]);
+            // // eslint-disable-next-line no-console
+            // console.log(result);
+            this.allId.push(id);
+            return Promise.resolve(this.allId);
         });
         // if (this.isIdIllegal(id) || this.isIdAdded(id)) {
         //     // eslint-disable-next-line no-console
