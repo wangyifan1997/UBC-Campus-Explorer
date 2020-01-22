@@ -1,0 +1,21 @@
+{
+    "title": "invalid key in NOT IS, with a mkey in scomparison",
+    "query": {
+      "WHERE": {
+        "NOT": {
+          "IS": {
+            "courses_avg": "Paul Carter"
+          }
+        } 
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_id",
+          "courses_avg"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

@@ -48,8 +48,12 @@ export default class InsightFacade implements IInsightFacade {
             let zip: JSZip = new JSZip();
             return zip.loadAsync(content, {base64: true});
         }).catch((err: any) => {
-            return Promise.reject(InsightError);
+            // eslint-disable-next-line no-console
+            console.log("no!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+            return Promise.reject(new InsightError());
         }).then((zipData: JSZip) => {
+            // eslint-disable-next-line no-console
+            console.log("here!!!!!!!!!!!!!!!!!!!!");
             return this.checkCoursesFolder(zipData);
         }).then((zipData: JSZip) => {
             // has courses folder, start setting up all promises
@@ -64,11 +68,13 @@ export default class InsightFacade implements IInsightFacade {
             return promiseInOne;
         }).catch((err: any) => {
             // no courses folder, reject
-            return Promise.reject(InsightError);
+            return Promise.reject(new InsightError());
         }).then((result: string[]) => {
-            // // eslint-disable-next-line no-console
-            // console.log(result);
+            // eslint-disable-next-line no-console
+            console.log(result);
             this.allId.push(id);
+            // eslint-disable-next-line no-console
+            console.log(this.allId);
             return Promise.resolve(this.allId);
         });
         // if (this.isIdIllegal(id) || this.isIdAdded(id)) {

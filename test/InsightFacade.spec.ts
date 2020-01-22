@@ -1,23 +1,18 @@
-import { expect } from "chai";
+import {expect} from "chai";
 import * as fs from "fs-extra";
-import {
-    InsightDataset,
-    InsightDatasetKind,
-    InsightError,
-} from "../src/controller/IInsightFacade";
+import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "../src/controller/IInsightFacade";
 import InsightFacade from "../src/controller/InsightFacade";
 import Log from "../src/Util";
 import TestUtil from "./TestUtil";
-import { NotFoundError } from "restify";
 
 // This should match the schema given to TestUtil.validate(..) in TestUtil.readTestQueries(..)
 // except 'filename' which is injected when the file is read.
 export interface ITestQuery {
     title: string;
-    query: any; // make any to allow testing structurally invalid queries
+    query: any;  // make any to allow testing structurally invalid queries
     isQueryValid: boolean;
     result: any;
-    filename: string; // This is injected when reading the file
+    filename: string;  // This is injected when reading the file
 }
 
 describe("InsightFacade Add/Remove Dataset", function () {
@@ -25,13 +20,15 @@ describe("InsightFacade Add/Remove Dataset", function () {
     // automatically be loaded in the 'before' hook.
     const datasetsToLoad: { [id: string]: string } = {
         courses: "./test/data/courses.zip",
-        courses01: "./test/data/courses01.zip",
-        empty: "./test/data/empty.zip",
-        corrupted: "./test/data/corrupted.zip",
-        notAPropZip: "./test/data/notAPropZip.zip",
-        notAZip: "./test/data/notAZip.txt",
-        containPDF: "./test/data/containPDF.zip",
-        containTEXT: "./test/data/containTEXT.zip",
+        coursesRAR: "./test/data/anRAR.rar",
+        emptyZipWithCoursesFolder: "./test/data/emptyZipWithCoursesFolder.zip",
+        emptyZipWithNoFolder: "./test/data/emptyZipWithNoFolder.zip",
+        actuallyAWord: "./test/data/actuallyAWord.zip",
+        emptyZipWithNotCoursesFolder: "./test/data/emptyZipWithNotCoursesFolder.zip",
+        zipWithCoursesFolderButInvalidFiles: "./test/data/zipWithCoursesFolderButInvalidFiles.zip",
+        zipWithZeroSection: "./test/data/zipWithZeroSection.zip",
+        zipWithOneSection: "./test/data/zipWithOneSection.zip",
+        zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip"
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
@@ -42,9 +39,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
         // into the datasets object
         Log.test(`Before all`);
         for (const id of Object.keys(datasetsToLoad)) {
-            datasets[id] = fs
-                .readFileSync(datasetsToLoad[id])
-                .toString("base64");
+            datasets[id] = fs.readFileSync(datasetsToLoad[id]).toString("base64");
         }
     });
 
@@ -69,584 +64,267 @@ describe("InsightFacade Add/Remove Dataset", function () {
         Log.test(`AfterTest: ${this.currentTest.title}`);
     });
 
+    it("Should list zero dataset when no dataset is added", () => {
+        const expected: InsightDataset[] = [];
+        return insightFacade.listDatasets().then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail();
+        });
+    });
+
+    it("Should list a dataset", () => {
+        const id: string = "courses";
+        const expected: InsightDataset[] = [{
+            id: "courses",
+            kind: InsightDatasetKind.Courses,
+            numRows: 64612
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail();
+        });
+    });
+
     // This is a unit test. You should create more like this!
     it("Should add a valid dataset", function () {
         const id: string = "courses";
         const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect(result).to.deep.equal(expected);
-            })
-            .catch((err: any) => {
-                expect.fail(err, expected, "Should not have rejected");
-            });
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
     });
 
-    // Add corrupted zip
-    it("Should add a corrupted zip dataset", function () {
-        const id: string = "corrupted";
+    it("Should not add a word document ended with .zip", function () {
+        const id: string = "actuallyAWord";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add an RAR", function () {
+        const id: string = "anRAR";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add an empty zip with no folders", function () {
+        const id: string = "emptyZipWithNoFolder";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add an empty zip with courses folder", function () {
+        const id: string = "emptyZipWithCoursesFolder";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add an empty zip with not courses folder", function () {
+        const id: string = "emptyZipWithNotCoursesFolder";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add a dataset with wrong file formats (.py)", function () {
+        const id: string = "zipWithCoursesFolderButInvalidFiles";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add a dataset with zero sections", function () {
+        const id: string = "zipWithZeroSection";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add a dataset with zero valid section", function () {
+        const id: string = "zipWithZeroValidSection";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should add a dataset with one section", function () {
+        const id: string = "zipWithOneSection";
         const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
     });
 
-    // Add empty zip
-    it("Should add a empty zip dataset", function () {
-        const id: string = "empty";
-        const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
+    it("Should add two valid dataset with different ids", function () {
+        const id1: string = "test1";
+        const id2: string = "test2";
+        const expected1: string[] = [id1];
+        const expected2: string[] = [id1, id2];
+        return insightFacade.addDataset(id1, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+            expect(result).to.deep.equal(expected1);
+        }).catch((err: any) => {
+            expect.fail(err, expected1, "Should not have rejected");
+        }).then(() => {
+            // eslint-disable-next-line no-console
+            console.log("start!!!!!!!!");
+            return insightFacade.addDataset(id2, datasets["course"], InsightDatasetKind.Courses);
+        }).then((result: string[]) => {
+            // eslint-disable-next-line no-console
+            console.log("!!!!!!!!");
+            expect(result).to.deep.equal(expected2);
+        }).catch((err: any) => {
+            // eslint-disable-next-line no-console
+            console.log(err);
+            // eslint-disable-next-line no-console
+            console.log("????????");
+            expect.fail(err, expected2, "Should not have rejected");
+        });
     });
 
-    // Add notAPropZip zip
-    it("Should add a notAPropZip zip dataset", function () {
-        const id: string = "notAPropZip";
-        const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // Add containPDF zip
-    it("Should add a containPDF zip dataset", function () {
-        const id: string = "containPDF";
-        const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // Add containTEXT zip
-    it("Should add a containTEXT zip dataset", function () {
-        const id: string = "containTEXT";
-        const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // Add notAZip txt
-    it("Should add a notAZip zip dataset", function () {
-        const id: string = "notAZip";
-        const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // Valid add
-    it("Should add a number key valid dataset", function () {
-        const key: string = "10";
-        const expected: string[] = [key];
-        return insightFacade
-            .addDataset(key, datasets["courses"], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect(result).to.deep.equal(expected);
-            })
-            .catch((err: any) => {
-                expect.fail(err, expected, "Should not have rejected");
-            });
-    });
-
-    // Multiple add
-    it("Should add some valid datasets", function () {
-        const id: string = "courses";
-        const id01: string = "courses01";
-        const expected: string[] = [id, id01];
-        insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses);
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .addDataset(id01, datasets[id], InsightDatasetKind.Courses)
-                    .then((result: string[]) => {
-                        expect(result).to.deep.equal(expected);
-                    })
-                    .catch((err: any) => {
-                        expect.fail(err, expected, "Should not have rejected");
-                    });
-            });
-    });
-
-    // False add
-    it("Should add a whitespace false valid dataset", function () {
-        const id: string = " ";
-        return insightFacade
-            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should add a underscore false valid dataset", function () {
-        const id: string = "_";
-        return insightFacade
-            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should add a repeated false valid dataset", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-                    .then((result: string[]) => {
-                        expect.fail(result, "Should not have resolved");
-                    })
-                    .catch((err: any) => {
-                        expect(err).to.equal(InsightError);
-                    });
-            });
-    });
-
-    // False add
-    it("Should add a null key false valid dataset", function () {
-        const id: string = "";
-        return insightFacade
-            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should add some keys false valid dataset", function () {
-        const id: string = " _";
-        return insightFacade
-            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should add undefined key false valid dataset", function () {
-        const id: string = undefined;
-        return insightFacade
-            .addDataset(id, datasets["courses"], InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should pass in false dataset value", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, "string", InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should pass in false dataset value", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, "", InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should pass in false dataset value", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, " ", InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should pass in false dataset value", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, undefined, InsightDatasetKind.Courses)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // False add
-    it("Should pass in false kind value", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], undefined)
-            .then((result: string[]) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.equal(InsightError);
-            });
-    });
-
-    // Simple remove
-    it("Should remove a valid dataset", function () {
+    it("should not add dataset with duplicate ids", function () {
         const id: string = "courses";
         const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .removeDataset(id)
-                    .then((result: string) => {
-                        expect(result).to.deep.equal(expected);
-                    })
-                    .catch((err: any) => {
-                        expect.fail(err, "Should not have rejected");
-                    });
-            });
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses);
+        }).then((result: string[]) => {
+            expect.fail();
+        }, (err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
     });
 
-    // Multiple remove
-    it("Should remove multiple valid datasets", function () {
+    it("should not add dataset with invalid id with _", function () {
+        const id: string = "test_invalid";
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add dataset with invalid id with empty", function () {
+        const id: string = "        ";
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect.fail();
+            }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should remove a dataset", () => {
         const id: string = "courses";
-        const id01: string = "courses01";
         const expected: string[] = [id];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .addDataset(id01, datasets[id], InsightDatasetKind.Courses)
-                    .then(() => {
-                        return insightFacade.removeDataset(id01).then(() => {
-                            return insightFacade
-                                .removeDataset(id)
-                                .then((result: string) => {
-                                    expect(result).to.deep.equal(expected);
-                                })
-                                .catch((err: any) => {
-                                    expect.fail(
-                                        err,
-                                        "Should not have rejected",
-                                    );
-                                });
-                        });
-                    });
-            });
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.removeDataset(id);
+        }).then((result: string) => {
+            expect(result).to.deep.equal(id);
+        }).catch((err: any) => {
+            expect.fail(err, id, "Should not have rejected");
+        });
     });
 
-    // Multiple remove
-    it("Should remove multiple valid datasets01", function () {
+    it("should reject when removing a dataset that is not existing", () => {
         const id: string = "courses";
-        const id01: string = "courses01";
-        const expected: string[] = [id01];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .addDataset(id01, datasets[id], InsightDatasetKind.Courses)
-                    .then(() => {
-                        return insightFacade.removeDataset(id).then(() => {
-                            return insightFacade
-                                .removeDataset(id01)
-                                .then((result: string) => {
-                                    expect(result).to.deep.equal(expected);
-                                })
-                                .catch((err: any) => {
-                                    expect.fail(
-                                        err,
-                                        "Should not have rejected",
-                                    );
-                                });
-                        });
-                    });
-            });
+        const expected: string[] = [id];
+        const nonExistedId: string = "noSuchId";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.removeDataset(nonExistedId);
+        }).then((result: string) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(NotFoundError);
+        });
     });
 
-    // Multiple remove
-    it("Should remove multiple valid datasets02", function () {
+    it("remove empty", () => {
+        const nonExistedId: string = "noSuchId";
+        return insightFacade.removeDataset(nonExistedId).then((result: string) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(NotFoundError);
+        });
+    });
+
+    // TODO: Should not need it
+    it("should reject when removing using an id with _", () => {
         const id: string = "courses";
-        const id01: string = "courses01";
-        const expected: string[] = [id01];
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade.removeDataset(id).then(() => {
-                    return insightFacade.removeDataset(id).then(() => {
-                        return insightFacade
-                            .addDataset(
-                                id01,
-                                datasets[id],
-                                InsightDatasetKind.Courses,
-                            )
-                            .then(() => {
-                                return insightFacade
-                                    .removeDataset(id01)
-                                    .then((result: string) => {
-                                        expect(result).to.deep.equal(expected);
-                                    })
-                                    .catch((err: any) => {
-                                        expect.fail(
-                                            err,
-                                            "Should not have rejected",
-                                        );
-                                    });
-                            });
-                    });
-                });
-            });
+        const invalidId: string = "nice_courses";
+        const expected: string[] = [id];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.removeDataset(invalidId);
+        }).then((result: string) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
     });
 
-    // Empty false remove
-    it("Should remove an empty dataset", function () {
+    // TODO: Should not need it
+    it("should reject when removing using an empty id", () => {
         const id: string = "courses";
-        return insightFacade
-            .removeDataset(id)
-            .then((result: string) => {
-                expect.fail(result, "Should not have resolved");
-            })
-            .catch((err: any) => {
-                expect(err).to.be.oneOf([InsightError, NotFoundError]);
-            });
-    });
-
-    // False multiple remove
-    it("Should add then remove invalid dataset", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade.removeDataset(id).then(() => {
-                    return insightFacade
-                        .removeDataset(id)
-                        .then((result: string) => {
-                            expect.fail(result, "Should not have resolved");
-                        })
-                        .catch((err: any) => {
-                            expect(err).to.be.oneOf([
-                                InsightError,
-                                NotFoundError,
-                            ]);
-                        });
-                });
-            });
-    });
-
-    // False key remove
-    it("Should remove invalid key dataset", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .removeDataset("false")
-                    .then((result: string) => {
-                        expect.fail(result, "Should not have resolved");
-                    })
-                    .catch((err: any) => {
-                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
-                    });
-            });
-    });
-
-    // False key remove
-    it("Should remove invalid key dataset", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .removeDataset("_")
-                    .then((result: string) => {
-                        expect.fail(result, "Should not have resolved");
-                    })
-                    .catch((err: any) => {
-                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
-                    });
-            });
-    });
-
-    // False key remove
-    it("Should remove invalid key dataset", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .removeDataset(" ")
-                    .then((result: string) => {
-                        expect.fail(result, "Should not have resolved");
-                    })
-                    .catch((err: any) => {
-                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
-                    });
-            });
-    });
-
-    // False key remove
-    it("Should remove invalid key dataset", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .removeDataset("")
-                    .then((result: string) => {
-                        expect.fail(result, "Should not have resolved");
-                    })
-                    .catch((err: any) => {
-                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
-                    });
-            });
-    });
-
-    // False key remove
-    it("Should remove invalid key dataset", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .removeDataset(undefined)
-                    .then((result: string) => {
-                        expect.fail(result, "Should not have resolved");
-                    })
-                    .catch((err: any) => {
-                        expect(err).to.be.oneOf([InsightError, NotFoundError]);
-                    });
-            });
-    });
-
-    // List datasets
-    it("Should list all datasets", function () {
-        const id: string = "courses";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .listDatasets()
-                    .then((result: InsightDataset[]) => {
-                        expect(result).to.equal([id]);
-                    })
-                    .catch((err: any) => {
-                        expect.fail(err, "Should not have resolved");
-                    });
-            });
-    });
-
-    // List some datasets
-    it("Should list all datasets", function () {
-        const id: string = "courses";
-        const id1: string = "courses01";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .addDataset(id1, datasets[id1], InsightDatasetKind.Courses)
-                    .then(() => {
-                        return insightFacade
-                            .listDatasets()
-                            .then((result: InsightDataset[]) => {
-                                expect(result).to.equal([id, id1]);
-                            })
-                            .catch((err: any) => {
-                                expect.fail(err, "Should not have resolved");
-                            });
-                    });
-            });
-    });
-
-    // List empty datasets
-    it("Should list no datasets", function () {
-        return insightFacade
-            .listDatasets()
-            .then((result: InsightDataset[]) => {
-                expect(result).to.equal([]);
-            })
-            .catch((err: any) => {
-                expect.fail(err, "Should not have resolved");
-            });
-    });
-
-    // List some datasets
-    it("Should list all datasets", function () {
-        const id: string = "courses";
-        const id1: string = "notAZip";
-        return insightFacade
-            .addDataset(id, datasets[id], InsightDatasetKind.Courses)
-            .then(() => {
-                return insightFacade
-                    .addDataset(id1, datasets[id1], InsightDatasetKind.Courses)
-                    .then(() => {
-                        return insightFacade
-                            .listDatasets()
-                            .then((result: InsightDataset[]) => {
-                                expect(result).to.equal([id]);
-                            })
-                            .catch((err: any) => {
-                                expect.fail(err, "Should not have resolved");
-                            });
-                    });
-            });
+        const invalidId: string = "     ";
+        const expected: string[] = [id];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.removeDataset(invalidId);
+        }).then((result: string) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
     });
 });
 
@@ -656,13 +334,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
  * You can still make tests the normal way, this is just a convenient tool for a majority of queries.
  */
 describe("InsightFacade PerformQuery", () => {
-    const datasetsToQuery: {
-        [id: string]: { path: string; kind: InsightDatasetKind };
-    } = {
-        courses: {
-            path: "./test/data/courses.zip",
-            kind: InsightDatasetKind.Courses,
-        },
+    const datasetsToQuery: { [id: string]: {path: string, kind: InsightDatasetKind} } = {
+        courses: {path: "./test/data/courses.zip", kind: InsightDatasetKind.Courses},
     };
     let insightFacade: InsightFacade;
     let testQueries: ITestQuery[] = [];
@@ -676,11 +349,7 @@ describe("InsightFacade PerformQuery", () => {
         try {
             testQueries = TestUtil.readTestQueries();
         } catch (err) {
-            expect.fail(
-                "",
-                "",
-                `Failed to read one or more test queries. ${err}`,
-            );
+            expect.fail("", "", `Failed to read one or more test queries. ${err}`);
         }
 
         // Load the datasets specified in datasetsToQuery and add them to InsightFacade.
@@ -690,9 +359,7 @@ describe("InsightFacade PerformQuery", () => {
         for (const id of Object.keys(datasetsToQuery)) {
             const ds = datasetsToQuery[id];
             const data = fs.readFileSync(ds.path).toString("base64");
-            loadDatasetPromises.push(
-                insightFacade.addDataset(id, data, ds.kind),
-            );
+            loadDatasetPromises.push(insightFacade.addDataset(id, data, ds.kind));
         }
         return Promise.all(loadDatasetPromises).catch((err) => {
             /* *IMPORTANT NOTE: This catch is to let this run even without the implemented addDataset,
@@ -721,14 +388,11 @@ describe("InsightFacade PerformQuery", () => {
         describe("Dynamic InsightFacade PerformQuery tests", function () {
             for (const test of testQueries) {
                 it(`[${test.filename}] ${test.title}`, function (done) {
-                    insightFacade
-                        .performQuery(test.query)
-                        .then((result) => {
-                            TestUtil.checkQueryResult(test, result, done);
-                        })
-                        .catch((err) => {
-                            TestUtil.checkQueryResult(test, err, done);
-                        });
+                    insightFacade.performQuery(test.query).then((result) => {
+                        TestUtil.checkQueryResult(test, result, done);
+                    }).catch((err) => {
+                        TestUtil.checkQueryResult(test, err, done);
+                    });
                 });
             }
         });

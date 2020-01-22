@@ -1,0 +1,19 @@
+{
+    "title": "invalid comparison in GT, an scomparison with a mkey",
+    "query": {
+      "WHERE": {
+        "GT": {
+          "courses_avg": "should not be here"
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_id",
+          "courses_avg"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

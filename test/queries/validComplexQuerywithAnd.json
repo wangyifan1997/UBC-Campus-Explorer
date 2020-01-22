@@ -1,0 +1,56 @@
+{
+    "title": "A valid query with many ANDs",
+    "query": {
+          "WHERE": {
+                "AND": [
+                  {
+                    "GT": {
+                      "courses_avg": 70
+                    }
+                  },
+                  {
+                    "LT": {
+                      "courses_fail": 200
+                    }
+                  },
+                  {
+                    "EQ": {
+                      "courses_year": 2010
+                    }
+                  },
+                  {
+                    "GT": {
+                      "courses_pass": 1
+                    }
+                  },
+                  {
+                    "IS": {
+                      "courses_dept": "cp*"
+                    }
+                  },
+                  {
+                    "NOT": {
+                      "IS": {
+                        "courses_instructor": "John Doe"
+                      }
+                    }
+                  },
+                  {
+                    "IS": {
+                      "courses_id": "*3*"
+                    }
+                  }
+                ]
+          },
+          "OPTIONS": {
+            "COLUMNS": [
+              "courses_dept",
+              "courses_id",
+              "courses_avg"
+            ],
+            "ORDER": "courses_avg"
+          }
+    },
+    "isQueryValid": true,
+    "result": [{"courses_dept":"cpsc","courses_id":"313","courses_avg":70.46},{"courses_dept":"cpsc","courses_id":"322","courses_avg":70.96},{"courses_dept":"cpsc","courses_id":"317","courses_avg":71.05},{"courses_dept":"cpsc","courses_id":"313","courses_avg":71.94},{"courses_dept":"cpsc","courses_id":"320","courses_avg":72.19},{"courses_dept":"cpsc","courses_id":"302","courses_avg":73.18},{"courses_dept":"cpsc","courses_id":"304","courses_avg":73.75},{"courses_dept":"cpsc","courses_id":"322","courses_avg":73.79},{"courses_dept":"cpsc","courses_id":"317","courses_avg":74.14},{"courses_dept":"cpsc","courses_id":"304","courses_avg":74.29},{"courses_dept":"cpsc","courses_id":"310","courses_avg":75.57},{"courses_dept":"cpsc","courses_id":"344","courses_avg":75.91},{"courses_dept":"cpsc","courses_id":"314","courses_avg":76.31},{"courses_dept":"cpsc","courses_id":"304","courses_avg":77},{"courses_dept":"cpsc","courses_id":"213","courses_avg":77.39},{"courses_dept":"cpsc","courses_id":"311","courses_avg":77.41},{"courses_dept":"cpsc","courses_id":"303","courses_avg":77.62},{"courses_dept":"cpsc","courses_id":"430","courses_avg":79.43},{"courses_dept":"cpsc","courses_id":"310","courses_avg":80.32},{"courses_dept":"cpsc","courses_id":"430","courses_avg":80.55},{"courses_dept":"cpsc","courses_id":"312","courses_avg":81.84},{"courses_dept":"cpsc","courses_id":"310","courses_avg":81.88},{"courses_dept":"cpsc","courses_id":"319","courses_avg":83.13},{"courses_dept":"cpsc","courses_id":"503","courses_avg":87.36},{"courses_dept":"cpsc","courses_id":"301","courses_avg":88},{"courses_dept":"cpsc","courses_id":"513","courses_avg":89.09},{"courses_dept":"cpsc","courses_id":"543","courses_avg":89.75}]
+}

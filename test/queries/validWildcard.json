@@ -1,0 +1,18 @@
+{
+    "title": "valid wildcard",
+    "query": {
+        "WHERE": {
+            "IS": {
+                "courses_instructor": "paul*"
+            }
+        },
+        "OPTIONS": {
+            "COLUMNS": [
+                "courses_dept",
+                "courses_avg"
+            ],
+            "ORDER": "courses_avg"
+        }
+    },
+    "isQueryValid": true,
+    "result": [{"courses_dept":"psyc","courses_avg":66.8},{"courses_dept":"psyc","courses_avg":66.93},{"courses_dept":"psyc","courses_avg":67.91},{"courses_dept":"psyc","courses_avg":67.95},{"courses_dept":"psyc","courses_avg":68.38},{"courses_dept":"psyc","courses_avg":68.46},{"courses_dept":"psyc","courses_avg":68.6},{"courses_dept":"psyc","courses_avg":68.65},{"courses_dept":"psyc","courses_avg":68.67},{"courses_dept":"psyc","courses_avg":68.79},{"courses_dept":"psyc","courses_avg":68.86},{"courses_dept":"psyc","courses_avg":69.38},{"courses_dept":"psyc","courses_avg":69.95},{"courses_dept":"psyc","courses_avg":70},{"courses_dept":"psyc","courses_avg":70.19},{"courses_dept":"psyc","courses_avg":71.33},{"courses_dept":"biol","courses_avg":76.32},{"courses_dept":"biol","courses_avg":77.63},{"courses_dept":"biol","courses_avg":80.31},{"courses_dept":"lled","courses_avg":81.45},{"courses_dept":"biol","courses_avg":81.55},{"courses_dept":"biol","courses_avg":82.5},{"courses_dept":"biol","courses_avg":82.67},{"courses_dept":"biol","courses_avg":82.72},{"courses_dept":"lled","courses_avg":83.18},{"courses_dept":"lled","courses_avg":83.46},{"courses_dept":"biol","courses_avg":83.93},{"courses_dept":"fish","courses_avg":85.43},{"courses_dept":"fish","courses_avg":85.9},{"courses_dept":"fish","courses_avg":86.5},{"courses_dept":"lled","courses_avg":86.56},{"courses_dept":"fish","courses_avg":86.7},{"courses_dept":"biol","courses_avg":87.11},{"courses_dept":"fish","courses_avg":87.25},{"courses_dept":"fish","courses_avg":87.78},{"courses_dept":"fish","courses_avg":88}]}
