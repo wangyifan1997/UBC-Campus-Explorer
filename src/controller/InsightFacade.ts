@@ -40,20 +40,29 @@ export default class InsightFacade implements IInsightFacade {
         return Promise.resolve(zipData);
     }
 
+    public parseCourseJSON(contents: string[]): Promise<string[]> {
+        let temp: any[] = [];
+        try {
+            for (let course of contents) {
+                temp.push(JSON.parse(course));
+            }
+        } catch (e) {
+            return Promise.reject(e);
+        }
+        return Promise.resolve(temp[0].result[0]);
+    }
+
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.isIdOk(id, content).then(() => {
             let zip: JSZip = new JSZip();
             return zip.loadAsync(content, {base64: true});
-        }, (err: any) => {
+        }).catch((err: any) => {
             throw new InsightError();
         }).then((zipData: JSZip) => {
             return this.checkCoursesFolder(zipData);
-        }, (err: any) => {
-            // eslint-disable-next-line no-console
-            console.log(err);
+        }).catch((err: any) => {
             throw new InsightError();
         }).then((zipData: JSZip) => {
-            // has courses folder, start setting up all promises
             let allFiles: string[] = [];
             zipData.folder("courses").forEach((relativePath, file) => {
                 allFiles.push(file.name);
@@ -61,59 +70,12 @@ export default class InsightFacade implements IInsightFacade {
             let allPromises: any[] = allFiles.map((fileDir: string) => {
                 return zipData.file(fileDir).async("text");
             });
-            let promiseInOne: any = Promise.all(allPromises);
-            return promiseInOne;
-        }, (err: any) => {
-            // no courses folder, reject
-            throw new InsightError();
+            return Promise.all(allPromises);
+        }).catch((err: any) => {
+            return Promise.reject(new InsightError());
         }).then((result: string[]) => {
-            // eslint-disable-next-line no-console
-            console.log(result);
-            this.allId.push(id);
-            // eslint-disable-next-line no-console
-            console.log(this.allId);
-            return Promise.resolve(this.allId);
+            return this.parseCourseJSON(result);
         });
-        // if (this.isIdIllegal(id) || this.isIdAdded(id)) {
-        //     // eslint-disable-next-line no-console
-        //     console.log("NO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //     return Promise.reject(InsightError);
-        // }
-        // let zip: JSZip = new JSZip();
-        // zip.loadAsync(content, {base64: true}).then((zipData: JSZip) => {
-        //     let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
-        //     // eslint-disable-next-line no-console
-        //     console.log("HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //     if (coursesFolder.length === 0) {
-        //         // eslint-disable-next-line no-console
-        //         console.log("NOTHING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //         return Promise.reject(InsightError);
-        //     }
-        //     // eslint-disable-next-line no-console
-        //     console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //     let tempFiles: any[] = [];
-        //     zipData.folder("courses").forEach(function (relativePath, file) {
-        //         // eslint-disable-next-line no-console
-        //         console.log("inside foreach!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //         // eslint-disable-next-line no-console
-        //         console.log("file name is:" + file.name);
-        //         zip.file(file.name).async("text").then((text: string) => {
-        //             // eslint-disable-next-line no-console
-        //             console.log("inside foreach then!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //             tempFiles.push(text);
-        //         }).catch((reason: any) => {
-        //             // eslint-disable-next-line no-console
-        //             console.log("inside reason!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //             return Promise.reject(InsightError);
-        //         });
-        //     });
-        //     // eslint-disable-next-line no-console
-        //     console.log(tempFiles.length);
-        //     this.allId.push(id);
-        //     // eslint-disable-next-line no-console
-        //     console.log("SHOULD RESOLVE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-        //     return Promise.resolve(this.allId);
-        // });
     }
 
     public removeDataset(id: string): Promise<string> {
