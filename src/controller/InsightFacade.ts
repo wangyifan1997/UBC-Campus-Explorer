@@ -42,18 +42,16 @@ export default class InsightFacade implements IInsightFacade {
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.isIdOk(id, content).then(() => {
-            // let idResult: string = result[0];
-            // let contentResult: string = result[1];
             let zip: JSZip = new JSZip();
             return zip.loadAsync(content, {base64: true});
-        }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-            console.log("no!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            return Promise.reject(new InsightError());
+        }, (err: any) => {
+            throw new InsightError();
         }).then((zipData: JSZip) => {
-            // eslint-disable-next-line no-console
-            console.log("here!!!!!!!!!!!!!!!!!!!!");
             return this.checkCoursesFolder(zipData);
+        }, (err: any) => {
+            // eslint-disable-next-line no-console
+            console.log(err);
+            throw new InsightError();
         }).then((zipData: JSZip) => {
             // has courses folder, start setting up all promises
             let allFiles: string[] = [];
@@ -65,9 +63,9 @@ export default class InsightFacade implements IInsightFacade {
             });
             let promiseInOne: any = Promise.all(allPromises);
             return promiseInOne;
-        }).catch((err: any) => {
+        }, (err: any) => {
             // no courses folder, reject
-            return Promise.reject(new InsightError());
+            throw new InsightError();
         }).then((result: string[]) => {
             // eslint-disable-next-line no-console
             console.log(result);

@@ -199,7 +199,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
         }).then(() => {
             // eslint-disable-next-line no-console
             console.log("start!!!!!!!!");
-            return insightFacade.addDataset(id2, datasets["course"], InsightDatasetKind.Courses);
+            return insightFacade.addDataset(id2, datasets["courses"], InsightDatasetKind.Courses);
         }).then((result: string[]) => {
             // eslint-disable-next-line no-console
             console.log("!!!!!!!!");
@@ -245,7 +245,9 @@ describe("InsightFacade Add/Remove Dataset", function () {
             (result: string[]) => {
                 expect.fail();
             }).catch((err: any) => {
-            expect(err).to.be.instanceOf(InsightError);
+            // eslint-disable-next-line no-console
+                console.log(err);
+                expect(err).to.be.instanceOf(InsightError);
         });
     });
 
