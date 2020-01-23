@@ -98,6 +98,7 @@ export default class InsightFacade implements IInsightFacade {
         }).then((zipData: JSZip) => {
             return this.checkCoursesFolder(zipData);
         }).then((zipData: JSZip) => {
+            // chaining all promises
             let allFiles: string[] = [];
             zipData.folder("courses").forEach((relativePath, file) => {
                 allFiles.push(file.name);
