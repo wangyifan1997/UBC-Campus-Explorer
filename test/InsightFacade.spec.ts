@@ -48,8 +48,7 @@ describe("Test helper methods", () => {
             expect.fail("should not have rejected");
         });
     });
-})
-
+});
 
 
 describe("InsightFacade Add/Remove Dataset", function () {

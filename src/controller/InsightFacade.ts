@@ -49,7 +49,29 @@ export default class InsightFacade implements IInsightFacade {
         } catch (e) {
             return Promise.reject(e);
         }
-        return Promise.resolve(temp[0].result[0]);
+        return Promise.resolve(temp[0].result);
+    }
+
+    public getAllSections(allCourses: any[]): Promise<any> {
+        let allSections: any[] = [];
+        for (let course of allCourses) {
+            let sections: any[] = course.result;
+            for (let section of sections) {
+                if (this.isValidSection(section)) {
+                    allSections.push(section);
+                }
+            }
+        }
+        if (allSections.length === 0) {
+            return Promise.reject(new InsightError());
+        } else {
+            return Promise.resolve(allSections);
+        }
+    }
+
+    // TODO: complete this function
+    public isValidSection(section: any): boolean {
+        return false;
     }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {

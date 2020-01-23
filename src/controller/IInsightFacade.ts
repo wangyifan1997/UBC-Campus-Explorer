@@ -15,6 +15,19 @@ export interface InsightDataset {
     numRows: number;
 }
 
+export interface CourseSection {
+    dept: string;
+    id: string;
+    avg: number;
+    instructor: string;
+    title: string;
+    pass: number;
+    fail: number;
+    audit: number;
+    uuid: string;
+    year: number;
+}
+
 export class InsightError extends Error {
     constructor(...args: any[]) {
         super(...args);
