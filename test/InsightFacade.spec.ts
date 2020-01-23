@@ -42,8 +42,7 @@ describe("Test helper methods", () => {
         "\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7,\"tier_ten\":0,\"High\":99,\"Course\":\"160\"," +
         "\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc\",\"Subject\":\"apsc\"}]}"];
         return insightFacade.parseCourseJSON(course1).then((result: string[]) => {
-            // eslint-disable-next-line no-console
-            console.log(result);
+            // do nothing
         }).catch((err: any) => {
             expect.fail("should not have rejected");
         });
@@ -136,8 +135,6 @@ describe("InsightFacade Add/Remove Dataset", function () {
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
             expect(result).to.deep.equal(expected);
         }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-            console.log(err);
             expect.fail(err, expected, "Should not have rejected");
         });
     });
@@ -255,8 +252,6 @@ describe("InsightFacade Add/Remove Dataset", function () {
         }).then((result: string[]) => {
             expect.fail();
         }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-            console.log(err);
             expect(err).to.be.instanceOf(InsightError);
         });
     });
@@ -277,8 +272,6 @@ describe("InsightFacade Add/Remove Dataset", function () {
             (result: string[]) => {
                 expect.fail();
             }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-            console.log(err);
             expect(err).to.be.instanceOf(InsightError);
         });
     });
