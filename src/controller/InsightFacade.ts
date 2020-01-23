@@ -17,26 +17,28 @@ import * as fs from "fs-extra";
 // muhan branch
 export default class InsightFacade implements IInsightFacade {
     public allId: string[];
-    public allDataset: any[];
+    public allDataset: any;
 
     constructor() {
         this.allId = [];
-        this.allDataset = [];
-        this.readDataset("./allData");
+        this.allDataset = {};
+        this.readDataset("./data");
         Log.trace("InsightFacadeImpl::init()");
     }
 
     public readDataset(path: string) {
         this.allId = this.myReadEntryNames(path);
+        if (!fs.pathExistsSync(path)) {
+            fs.mkdirSync(path);
+        }
         for (let id of this.allId) {
-            let dataset: any = {};
-            dataset.id = id;
-            dataset.sections = this.myReadFile(path + id);
-            this.allDataset.push(dataset);
+            let writtenFile: any = this.myReadFile(path + "/" + id);
+            let sections: any[] = writtenFile[id];
+            this.allDataset[id] = sections;
         }
     }
 
-    private isIdOk(id: string, content: string): Promise<any> {
+    private isIdOk(id: string): Promise<any> {
         return new Promise((resolve, reject) => {
             if (this.isIdAdded(id) || this.isIdIllegal(id)) {
                 reject(InsightError);
@@ -132,7 +134,7 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
-        return this.isIdOk(id, content).then(() => {
+        return this.isIdOk(id).then(() => {
             let zip: JSZip = new JSZip();
             return zip.loadAsync(content, {base64: true});
         }).then((zipData: JSZip) => {
@@ -154,13 +156,13 @@ export default class InsightFacade implements IInsightFacade {
         }).then((allSections: any[]) => {
             this.allId.push(id);
             let dataToBeAdd: any = {};
-            dataToBeAdd.result = allSections;
-            return this.myWriteFile("./allData" + id, dataToBeAdd);
+            dataToBeAdd[id] = allSections;
+            if (!fs.pathExistsSync("./data")) {
+                fs.mkdirSync("./data");
+            }
+            return this.myWriteFile("./data/" + id, dataToBeAdd);
         }).then((dataToBeAdd: any[]) => {
-            let dataset: any = {};
-            dataset.id = id;
-            dataset.sections = dataToBeAdd;
-            this.allDataset.push(dataset);
+            this.allDataset[id] = dataToBeAdd;
             return Promise.resolve(this.allId);
         }).catch((err: any) => {
             return Promise.reject(new InsightError());
