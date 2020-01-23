@@ -19,7 +19,7 @@ describe("Test helper methods", () => {
     let insightFacade: InsightFacade;
     insightFacade = new InsightFacade();
 
-    it("should be able to parse a course", () => {
+    it("should be able to parse a course, regardless of the result", () => {
         const course1: string[] = ["{\"result\":[{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":" +
             "\"comp eng design\"" +
             ",\"Section\":\"921\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28" +
@@ -136,6 +136,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
             expect(result).to.deep.equal(expected);
         }).catch((err: any) => {
+            // eslint-disable-next-line no-console
+            console.log(err);
             expect.fail(err, expected, "Should not have rejected");
         });
     });

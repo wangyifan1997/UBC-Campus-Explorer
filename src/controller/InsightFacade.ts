@@ -49,7 +49,7 @@ export default class InsightFacade implements IInsightFacade {
         } catch (e) {
             return Promise.reject(e);
         }
-        return Promise.resolve(temp[0].result);
+        return Promise.resolve(temp);
     }
 
     public getAllSections(allCourses: any[]): Promise<any> {
@@ -58,7 +58,16 @@ export default class InsightFacade implements IInsightFacade {
             let sections: any[] = course.result;
             for (let section of sections) {
                 if (this.isValidSection(section)) {
-                    allSections.push(section);
+                    section.id = section.id.toString();
+                    if (section.Year.toLowerCase() === "overall") {
+                        section.Year = 1900;
+                        allSections.push(section);
+                    } else {
+                        section.Year = Number(section.Year);
+                        if (!isNaN(section.Year)) {
+                            allSections.push(section);
+                        }
+                    }
                 }
             }
         }
@@ -69,21 +78,25 @@ export default class InsightFacade implements IInsightFacade {
         }
     }
 
-    // TODO: complete this function
     public isValidSection(section: any): boolean {
-        return false;
+        return (typeof section.Subject === "string"
+            && typeof section.Course === "string"
+            && typeof section.Avg === "number"
+            && typeof section.Professor === "string"
+            && typeof section.Title === "string"
+            && typeof section.Pass === "number"
+            && typeof section.Fail === "number"
+            && typeof section.Audit === "number"
+            && typeof section.id === "number"
+            && typeof section.Year === "string");
     }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.isIdOk(id, content).then(() => {
             let zip: JSZip = new JSZip();
             return zip.loadAsync(content, {base64: true});
-        }).catch((err: any) => {
-            throw new InsightError();
         }).then((zipData: JSZip) => {
             return this.checkCoursesFolder(zipData);
-        }).catch((err: any) => {
-            throw new InsightError();
         }).then((zipData: JSZip) => {
             let allFiles: string[] = [];
             zipData.folder("courses").forEach((relativePath, file) => {
@@ -93,10 +106,15 @@ export default class InsightFacade implements IInsightFacade {
                 return zipData.file(fileDir).async("text");
             });
             return Promise.all(allPromises);
-        }).catch((err: any) => {
-            return Promise.reject(new InsightError());
         }).then((result: string[]) => {
             return this.parseCourseJSON(result);
+        }).then((allCourses: string[]) => {
+            return this.getAllSections(allCourses);
+        }).then((allSections: any[]) => {
+            this.allId.push(id);
+            return Promise.resolve(this.allId);
+        }).catch((err: any) => {
+            return Promise.reject(new InsightError());
         });
     }
 
