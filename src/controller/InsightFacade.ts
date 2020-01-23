@@ -5,6 +5,7 @@ import * as JSZip from "jszip";
 import {expect} from "chai";
 import {JSZipObject} from "jszip";
 import {promises} from "dns";
+import * as fs from "fs-extra";
 
 /**
  * This is the main programmatic entry point for the project.
@@ -15,12 +16,24 @@ import {promises} from "dns";
 // dev branch
 // muhan branch
 export default class InsightFacade implements IInsightFacade {
-
     public allId: string[];
+    public allDataset: any[];
 
     constructor() {
         this.allId = [];
+        this.allDataset = [];
+        this.readDataset("./allData");
         Log.trace("InsightFacadeImpl::init()");
+    }
+
+    public readDataset(path: string) {
+        this.allId = this.myReadEntryNames(path);
+        for (let id of this.allId) {
+            let dataset: any = {};
+            dataset.id = id;
+            dataset.sections = this.myReadFile(path + id);
+            this.allDataset.push(dataset);
+        }
     }
 
     private isIdOk(id: string, content: string): Promise<any> {
@@ -91,6 +104,33 @@ export default class InsightFacade implements IInsightFacade {
             && typeof section.Year === "string");
     }
 
+    public myWriteFile(path: string, data: any): Promise<any> {
+        try {
+            fs.writeFileSync(path, JSON.stringify(data));
+        } catch (e) {
+            return Promise.reject(e);
+        }
+        return Promise.resolve(data);
+    }
+
+    public myReadFile(path: string): any {
+        let result: any = null;
+        try {
+            result = fs.readFileSync(path);
+        } catch (e) {
+            result = (e as Error).message;
+        }
+        return result;
+    }
+
+    public myReadEntryNames(path: string): string[] {
+        let result: string[] = [];
+        fs.readdirSync(path).forEach((file: string) => {
+            result.push(file);
+        });
+        return result;
+    }
+
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.isIdOk(id, content).then(() => {
             let zip: JSZip = new JSZip();
@@ -113,6 +153,14 @@ export default class InsightFacade implements IInsightFacade {
             return this.getAllSections(allCourses);
         }).then((allSections: any[]) => {
             this.allId.push(id);
+            let dataToBeAdd: any = {};
+            dataToBeAdd.result = allSections;
+            return this.myWriteFile("./allData" + id, dataToBeAdd);
+        }).then((dataToBeAdd: any[]) => {
+            let dataset: any = {};
+            dataset.id = id;
+            dataset.sections = dataToBeAdd;
+            this.allDataset.push(dataset);
             return Promise.resolve(this.allId);
         }).catch((err: any) => {
             return Promise.reject(new InsightError());
