@@ -61,7 +61,6 @@ describe("InsightFacade Add/Remove Dataset", function () {
         actuallyAWord: "./test/data/actuallyAWord.zip",
         emptyZipWithNotCoursesFolder: "./test/data/emptyZipWithNotCoursesFolder.zip",
         zipWithCoursesFolderButInvalidFiles: "./test/data/zipWithCoursesFolderButInvalidFiles.zip",
-        zipWithZeroSection: "./test/data/zipWithZeroSection.zip",
         zipWithOneSection: "./test/data/zipWithOneSection.zip",
         zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip"
     };
@@ -130,9 +129,10 @@ describe("InsightFacade Add/Remove Dataset", function () {
 
     // This is a unit test. You should create more like this!
     it("Should add a valid dataset", function () {
-        const id: string = "courses";
+        const id: string = "test1";
         const expected: string[] = [id];
-        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
             expect(result).to.deep.equal(expected);
         }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
@@ -193,15 +193,6 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
-    it("Should not add a dataset with zero sections", function () {
-        const id: string = "zipWithZeroSection";
-        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
-            expect.fail();
-        }).catch((err: any) => {
-            expect(err).to.be.instanceOf(InsightError);
-        });
-    });
-
     it("Should not add a dataset with zero valid section", function () {
         const id: string = "zipWithZeroValidSection";
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
@@ -222,8 +213,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
     });
 
     it("Should add two valid dataset with different ids", function () {
-        const id1: string = "test1";
-        const id2: string = "test2";
+        const id1: string = "test2";
+        const id2: string = "test3";
         const expected1: string[] = [id1];
         const expected2: string[] = [id1, id2];
         return insightFacade.addDataset(id1, datasets["courses"], InsightDatasetKind.Courses).then(
@@ -241,14 +232,15 @@ describe("InsightFacade Add/Remove Dataset", function () {
     });
 
     it("should not add dataset with duplicate ids", function () {
-        const id: string = "courses";
+        const id: string = "test4";
         const expected: string[] = [id];
-        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
             expect(result).to.deep.equal(expected);
         }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         }).then(() => {
-            return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses);
+            return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses);
         }).then((result: string[]) => {
             expect.fail();
         }).catch((err: any) => {

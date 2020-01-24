@@ -27,10 +27,10 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     public readDataset(path: string) {
-        this.allId = this.myReadEntryNames(path);
         if (!fs.pathExistsSync(path)) {
             fs.mkdirSync(path);
         }
+        this.allId = this.myReadEntryNames(path);
         for (let id of this.allId) {
             let writtenFile: any = this.myReadFile(path + "/" + id);
             let sections: any[] = writtenFile[id];
