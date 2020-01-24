@@ -179,7 +179,7 @@ export default class InsightFacade implements IInsightFacade {
             this.handler.myDeleteDataset(id);
             return Promise.resolve(id);
         }).catch((err: any) => {
-            return Promise.reject(err as Error);
+            return Promise.reject(err);
         });
     }
 

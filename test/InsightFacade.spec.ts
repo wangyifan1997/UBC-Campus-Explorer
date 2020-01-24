@@ -115,7 +115,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
             numRows: 64612
         }];
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
-            // expect(result).to.deep.equal(expected);
+            expect(result).to.deep.equal(["courses"]);
         }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         }).then(() => {
