@@ -21,6 +21,7 @@ export default class InsightFacade implements IInsightFacade {
     private mfields: string[] = ["avg", "pass", "fail", "audit", "year"];
     private sfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
     private idInQuery: string[] = [];
+    private fieldsInQuery: string[] = [];
 
     constructor() {
         this.handler = new DataHandler();
@@ -105,8 +106,44 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     private validateOptions(q: any): boolean {
-        return false;
+        let mskeys: any = q.COLUMNS;
+        if (typeof mskeys === "undefined") {
+            return false;
+        }
+        if (mskeys.length < 1) {
+            return false;
+        }
+        for (let mskey of mskeys) {
+            if (typeof mskey !== "string") {
+                return false;
+            }
+            let splittedmskeys: string[] = mskey.split("_");
+            if (splittedmskeys.length !== 2) {
+                return false;
+            }
+            let idstring: string = splittedmskeys[0];
+            let msfield: string = splittedmskeys[1];
+            if (!(this.validateIdstring(idstring)
+                && (this.mfields.includes(msfield) || this.sfields.includes(msfield)))) {
+                return false;
+            }
+            this.fieldsInQuery.push(msfield);
+        }
+        if (typeof q.ORDER !== "undefined") {
+            let order: any = q.ORDER;
+            if (typeof order !== "string") {
+                return false;
+            }
+            let splittedOrder: string[] = order.split("_");
+            if (splittedOrder.length !== 2) {
+                return false;
+            }
+            let idstring: string = splittedOrder[0];
+            let msfield: string = splittedOrder[1];
+            return (this.validateIdstring(idstring) && this.fieldsInQuery.includes(msfield));
+        }
     }
+
 
     private validateIdstring(idstring: string): boolean {
         if (this.idInQuery.length === 0) {
@@ -143,10 +180,10 @@ export default class InsightFacade implements IInsightFacade {
             let idstring: string = skey[0];
             let sfield: string = skey[1];
             let str: any = Object.values(value)[0];
-            if (str.length === 0) {
+            if (typeof str !== "string") {
                 return false;
             } else {
-                return (typeof str === "string")
+                return (str.length > 0)
                     && str.substring(1, str.length - 1).indexOf("*") === -1
                     && this.validateIdstring(idstring)
                     && this.sfields.includes(sfield);
