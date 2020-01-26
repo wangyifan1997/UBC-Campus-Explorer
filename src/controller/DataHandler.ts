@@ -12,7 +12,7 @@ export default class DataHandler {
     private folder: string;
     private allInsightDataset: InsightDataset[];
     private sectionCounter: number;
-
+    // todo 所有读写要扫硬盘
     // Constructor
     constructor() {
         this.allId = [];

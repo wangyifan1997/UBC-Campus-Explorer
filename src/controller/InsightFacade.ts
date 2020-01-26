@@ -17,124 +17,16 @@ import DataHandler from "./DataHandler";
 // dev branch
 // muhan branch
 export default class InsightFacade implements IInsightFacade {
-    // public allId: string[];
-    // public allDataset: any;
     private handler: DataHandler;
+    private mfields: string[] = ["avg", "pass", "fail", "audit", "year"];
+    private sfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
+    private idInQuery: string[] = [];
 
     constructor() {
-        // this.allId = [];
-        // this.allDataset = {};
         this.handler = new DataHandler();
         this.handler.readDataset();
         Log.trace("InsightFacadeImpl::init()");
     }
-    //
-    // public readDataset(path: string) {
-    //     if (!fs.pathExistsSync(path)) {
-    //         fs.mkdirSync(path);
-    //     }
-    //     this.allId = this.myReadEntryNames(path);
-    //     for (let id of this.allId) {
-    //         let writtenFile: any = this.myReadFile(path + "/" + id);
-    //         let sections: any[] = writtenFile[id];
-    //         this.allDataset[id] = sections;
-    //     }
-    // }
-    //
-    // private isIdOk(id: string): Promise<any> {
-    //     return new Promise((resolve, reject) => {
-    //         if (this.isIdAdded(id) || this.isIdIllegal(id)) {
-    //             reject(InsightError);
-    //         }
-    //         resolve();
-    //     });
-    // }
-    //
-    // private checkCoursesFolder(zipData: JSZip): Promise<any> {
-    //     let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
-    //     if (coursesFolder.length === 0) {
-    //         return Promise.reject(InsightError);
-    //     }
-    //     return Promise.resolve(zipData);
-    // }
-    //
-    // public parseCourseJSON(contents: string[]): Promise<string[]> {
-    //     let temp: any[] = [];
-    //     try {
-    //         for (let course of contents) {
-    //             temp.push(JSON.parse(course));
-    //         }
-    //     } catch (e) {
-    //         return Promise.reject(e);
-    //     }
-    //     return Promise.resolve(temp);
-    // }
-    //
-    // public getAllSections(allCourses: any[]): Promise<any> {
-    //     let allSections: any[] = [];
-    //     for (let course of allCourses) {
-    //         let sections: any[] = course.result;
-    //         for (let section of sections) {
-    //             if (this.isValidSection(section)) {
-    //                 section.id = section.id.toString();
-    //                 if (section.Year.toLowerCase() === "overall") {
-    //                     section.Year = 1900;
-    //                     allSections.push(section);
-    //                 } else {
-    //                     section.Year = Number(section.Year);
-    //                     if (!isNaN(section.Year)) {
-    //                         allSections.push(section);
-    //                     }
-    //                 }
-    //             }
-    //         }
-    //     }
-    //     if (allSections.length === 0) {
-    //         return Promise.reject(new InsightError());
-    //     } else {
-    //         return Promise.resolve(allSections);
-    //     }
-    // }
-    //
-    // public isValidSection(section: any): boolean {
-    //     return (typeof section.Subject === "string"
-    //         && typeof section.Course === "string"
-    //         && typeof section.Avg === "number"
-    //         && typeof section.Professor === "string"
-    //         && typeof section.Title === "string"
-    //         && typeof section.Pass === "number"
-    //         && typeof section.Fail === "number"
-    //         && typeof section.Audit === "number"
-    //         && typeof section.id === "number"
-    //         && typeof section.Year === "string");
-    // }
-    //
-    // public myWriteFile(path: string, data: any): Promise<any> {
-    //     try {
-    //         fs.writeFileSync(path, JSON.stringify(data));
-    //     } catch (e) {
-    //         return Promise.reject(e);
-    //     }
-    //     return Promise.resolve(data);
-    // }
-    //
-    // public myReadFile(path: string): any {
-    //     let result: any = null;
-    //     try {
-    //         result = fs.readFileSync(path);
-    //     } catch (e) {
-    //         result = (e as Error).message;
-    //     }
-    //     return result;
-    // }
-    //
-    // public myReadEntryNames(path: string): string[] {
-    //     let result: string[] = [];
-    //     fs.readdirSync(path).forEach((file: string) => {
-    //         result.push(file);
-    //     });
-    //     return result;
-    // }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.handler.isIdOkToAdd(id).then(() => {
@@ -142,31 +34,15 @@ export default class InsightFacade implements IInsightFacade {
         }).then((zipData: JSZip) => {
             return this.handler.checkCoursesFolder(zipData);
         }).then((zipData: JSZip) => {
-            // chaining all promises
-            // let allFiles: string[] = [];
-            // zipData.folder("courses").forEach((relativePath, file) => {
-            //     allFiles.push(file.name);
-            // });
-            // let allPromises: any[] = allFiles.map((fileDir: string) => {
-            //     return zipData.file(fileDir).async("text");
-            // });
-            // return Promise.all(allPromises);
             return this.handler.loadAllFilesToAllPromises(zipData);
         }).then((result: string[]) => {
             return this.handler.parseCourseJSON(result);
         }).then((allCourses: string[]) => {
             return this.handler.getAllSections(allCourses);
         }).then((allSections: any[]) => {
-            // this.allId.push(id);
             this.handler.addId(id);
-            // let dataToBeAdd: any = {};
-            // dataToBeAdd[id] = allSections;
-            // if (!fs.pathExistsSync("./data")) {
-            //     fs.mkdirSync("./data");
-            // }
             return this.handler.myWriteFile(id, allSections);
         }).then((dataToBeAdd: any[]) => {
-            // this.allDataset[id] = dataToBeAdd;
             this.handler.addToDataset(id, dataToBeAdd);
             return Promise.resolve(this.handler.getAllId());
         }).catch((err: any) => {
@@ -184,27 +60,129 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     public performQuery(query: any): Promise<any[]> {
-        return Promise.reject("Not implemented.");
+        try {
+            let parsedQuery: any = JSON.parse(query);
+            if (typeof parsedQuery.WHERE === "undefined" || typeof parsedQuery.OPTIONS === "undefined") {
+                return Promise.reject(new InsightError());
+            }
+            if (this.validateWhere(parsedQuery.WHERE) && this.validateOptions(parsedQuery.OPTIONS)) {
+                return this.findMatchingSections(parsedQuery);
+            } else {
+                return Promise.reject(new InsightError());
+            }
+        } catch (err) {
+            return Promise.reject(new InsightError());
+        }
+
     }
 
     public listDatasets(): Promise<InsightDataset[]> {
         return Promise.resolve(this.handler.getAllInsightDataset());
     }
 
-    // private isIdIllegal(id: string): boolean {
-    //     let count: number = 0;
-    //     for (let letter of id) {
-    //         if (letter === " ") {
-    //             count++;
-    //         }
-    //         if (letter === "_") {
-    //             return true;
-    //         }
-    //     }
-    //     return count === id.length;
-    // }
-    //
-    // private isIdAdded(id: string): boolean {
-    //     return this.allId.includes(id);
-    // }
+    private findMatchingSections(q: any): Promise<any[]> {
+        return Promise.reject("not implemented");
+    }
+
+    private validateWhere(q: any): boolean {
+        let key: string = Object.keys(q)[0];
+        let value: any = Object.values(q)[0];
+        switch (key) {
+            case "AND":
+            case "OR":
+                return this.validateANDOR(value);
+            case "NOT":
+                return this.validateNOT(value);
+            case "GT":
+            case "LT":
+            case "EQ":
+                return this.validateGTLTEQ(value);
+            case "IS":
+                return this.validateIS(value);
+            default:
+                return false;
+        }
+    }
+
+    private validateOptions(q: any): boolean {
+        return false;
+    }
+
+    private validateIdstring(idstring: string): boolean {
+        if (this.idInQuery.length === 0) {
+            if (this.handler.getAllId().includes(idstring)) {
+                this.idInQuery.push(idstring);
+            } else {
+                return false;
+            }
+        } else {
+            return this.idInQuery.includes(idstring);
+        }
+    }
+
+    private validateNOT(value: any): boolean {
+        if (typeof value !== "object") {
+            return false;
+        }
+        return this.validateWhere(value);
+    }
+
+    private validateIS(value: any): boolean {
+        if (typeof value !== "object") {
+            return false;
+        }
+        // eslint-disable-next-line no-console
+        console.log(Object.keys(value).length);
+        if (Object.keys(value).length !== 1) {
+            return false;
+        }
+        let skey: string[] = Object.keys(value)[0].split("_");
+        if (skey.length !== 2) {
+            return false;
+        } else {
+            let idstring: string = skey[0];
+            let sfield: string = skey[1];
+            let str: any = Object.values(value)[0];
+            if (str.length === 0) {
+                return false;
+            } else {
+                return (typeof str === "string")
+                    && str.substring(1, str.length - 1).indexOf("*") === -1
+                    && this.validateIdstring(idstring)
+                    && this.sfields.includes(sfield);
+            }
+        }
+    }
+
+    private validateGTLTEQ(value: any): boolean {
+        if (typeof value !== "object") {
+            return false;
+        }
+        if (Object.keys(value).length !== 1) {
+            return false;
+        }
+        let mkey: string[] = Object.keys(value)[0].split("_");
+        if (mkey.length !== 2) {
+            return false;
+        } else {
+            let idstring: string = mkey[0];
+            let mfield: string = mkey[1];
+            let num: any = Object.values(value)[0];
+            return (typeof num === "number")
+                && this.validateIdstring(idstring)
+                && this.mfields.includes(mfield);
+        }
+    }
+
+    private validateANDOR(value: any): boolean {
+        if (value.length < 1) {
+            return false;
+        }
+        for (let innerObject of value) {
+            if (!this.validateWhere(innerObject)) {
+                return false;
+            }
+        }
+        return true;
+    }
 }
