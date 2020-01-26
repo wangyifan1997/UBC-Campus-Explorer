@@ -4,6 +4,7 @@ import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from ".
 import InsightFacade from "../src/controller/InsightFacade";
 import Log from "../src/Util";
 import TestUtil from "./TestUtil";
+import DataHandler from "../src/controller/DataHandler";
 
 // This should match the schema given to TestUtil.validate(..) in TestUtil.readTestQueries(..)
 // except 'filename' which is injected when the file is read.
@@ -14,40 +15,45 @@ export interface ITestQuery {
     result: any;
     filename: string;  // This is injected when reading the file
 }
-//
-// describe("Test helper methods", () => {
-//     let insightFacade: InsightFacade;
-//     insightFacade = new InsightFacade();
-//
-//     it("should be able to parse a course, regardless of the result", () => {
-//         const course1: string[] = ["{\"result\":[{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":" +
-//         "\"comp eng design\"" +
-//         ",\"Section\":\"921\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28" +
-//         ",\"tier_sixty_four\":2,\"id\":1418,\"tier_sixty_eight\":5,\"tier_zero\":0,\"tier_seventy_six" +
-//         "\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"agharebparast, farshid\",\"Audit\":0," +
-//         "\"tier_g_fifty" +
-//         "\":2,\"tier_forty\":1,\"Withdrew\":1,\"Year\":\"2013\",\"tier_twenty\":1," +
-//         "\"Stddev\":13.38,\"Enrolled\":90,\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7," +
-//         "\"tier_ten\":0," +
-//         "\"High\":99,\"Course\":\"160\",\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc" +
-//         "\"," +
-//         "\"Subject" +
-//         "\":\"apsc\"},{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":\"comp eng design\"," +
-//         "\"Section\":\"overall\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28,\"tier_sixty_four" +
-//         "\":2," +
-//         "\"id\":1419,\"tier_sixty_eight\":5,\"tier_zero\":0," +
-//         "\"tier_seventy_six\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"\",\"Audit\":0,\"tier_g_fifty" +
-//         "\":2,\"tier_forty\":1,\"Withdrew\":2,\"Year\":\"2013\",\"tier_twenty\":1,\"Stddev\":13.38,\"Enrolled" +
-//         "\":91," +
-//         "\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7,\"tier_ten\":0,\"High\":99,\"Course\":\"160\"," +
-//         "\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc\",\"Subject\":\"apsc\"}]}"];
-//         return insightFacade.parseCourseJSON(course1).then((result: string[]) => {
-//             // do nothing
-//         }).catch((err: any) => {
-//             expect.fail("should not have rejected");
-//         });
-//     });
-// });
+
+describe("Test helper methods", () => {
+    let dataHandler: DataHandler;
+    dataHandler = new DataHandler();
+
+    it("should be able to filter invalid section", () => {
+        const course1: string[] = ["{\"result\":[{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":" +
+        "\"comp eng design\"" +
+        ",\"Section\":\"921\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28" +
+        ",\"tier_sixty_four\":2,\"id\":1418,\"tier_sixty_eight\":5,\"tier_zero\":0,\"tier_seventy_six" +
+        "\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"agharebparast, farshid\",\"Audit\":0," +
+        "\"tier_g_fifty" +
+        "\":2,\"tier_forty\":1,\"Withdrew\":1,\"Year\":\"2013\",\"tier_twenty\":1," +
+        "\"Stddev\":13.38,\"Enrolled\":90,\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7," +
+        "\"tier_ten\":0," +
+        "\"High\":99,\"Course\":\"160\",\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc" +
+        "\"," +
+        "\"Subject" +
+        "\":\"apsc\"},{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":\"comp eng design\"," +
+        "\"Section\":\"overall\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28,\"tier_sixty_four" +
+        "\":2," +
+        "\"id\":1419,\"tier_sixty_eight\":5,\"tier_zero\":0," +
+        "\"tier_seventy_six\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"\",\"Audit\":0,\"tier_g_fifty" +
+        "\":2,\"tier_forty\":1,\"Withdrew\":2," +
+        // "\"Year\":\"2013\",\"tier_twenty\":1,\"Stddev\":13.38,\"Enrolled" +
+        // "\":91," +
+        "\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7,\"tier_ten\":0,\"High\":99,\"Course\":\"160\"," +
+        "\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc\",\"Subject\":\"apsc\"}]}"];
+        return dataHandler.parseCourseJSON(course1).then((result: string[]) => {
+            return dataHandler.getAllSections(result);
+        }).catch((err: any) => {
+            expect.fail("should not have rejected");
+        }).then((allSections: any[]) => {
+            expect(allSections.length).equal(1);
+        }).catch((err: any) => {
+            expect.fail("should not have rejected");
+        });
+    });
+});
 
 
 describe("InsightFacade Add/Remove Dataset", function () {
