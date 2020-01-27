@@ -167,6 +167,7 @@ export default class DataHandler {
         this.allId = this.myReadEntryNames(this.path);
         for (let id of this.allId) {
             let writtenFile: any = this.myReadFile(this.path + "/" + id);
+            writtenFile = JSON.parse(writtenFile);
             let sections: any[] = writtenFile[id];
             this.allDataset[id] = sections;
         }
@@ -187,8 +188,9 @@ export default class DataHandler {
     }
 
     private createDataToBeAdd(id: string, allSections: any[]): any {
-        let dataToBeAdd: any = {};
+        let dataToBeAdd: { [id: string]: any } = {};
         dataToBeAdd[id] = allSections;
+        return dataToBeAdd;
     }
 
     public addId(id: string) {
@@ -218,8 +220,11 @@ export default class DataHandler {
         }
     }
 
-    public addToDataset(id: string, dataToBeAdd: any[]) {
-        this.allDataset[id] = dataToBeAdd;
+
+    public addToDataset(id: string, dataToBeAdd: { [id: string]: any }) {
+        this.allDataset[id] = dataToBeAdd[id];
+        // eslint-disable-next-line no-console
+        console.log(this.allDataset);
         this.addInsightDataset(id);
     }
 

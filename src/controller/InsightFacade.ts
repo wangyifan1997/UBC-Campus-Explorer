@@ -66,13 +66,15 @@ export default class InsightFacade implements IInsightFacade {
         try {
             this.idInQuery = [];
             this.fieldsInQuery = [];
-            if (typeof query.WHERE === "undefined" || typeof query.OPTIONS === "undefined") {
+            if (typeof query.WHERE === "undefined"
+                || typeof query.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
             }
-            // todo 检查是否有excessive keys
-            if (this.validateWhere(query.WHERE) || this.validateOptions(query.OPTIONS)) { // should have been and
-                return Promise.resolve([this.validateWhere(query.WHERE), this.validateOptions(query.OPTIONS)]);
-                // return this.findMatchingSections(query);
+            // todo 检查是否有excessive keys in query and options
+            // todo 都改完以后要把条件改成and
+            if (this.validateWhere(query.WHERE) && this.validateOptions(query.OPTIONS)) {
+                // return Promise.resolve([this.validateWhere(query.WHERE), this.validateOptions(query.OPTIONS)]);
+                return this.findMatchingSections(query);
             } else {
                 return Promise.reject(new InsightError());
             }
@@ -95,13 +97,11 @@ export default class InsightFacade implements IInsightFacade {
                 return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
             }
         } catch (e) {
-            return Promise.reject(e);
+            throw e;
         }
     }
 
     private findMatchingWHERE(q: any): any[] {
-        // eslint-disable-next-line no-console
-        console.log("in where");
         let key: string = Object.keys(q)[0];
         let value: any = Object.values(q)[0];
         switch (key) {
@@ -166,17 +166,19 @@ export default class InsightFacade implements IInsightFacade {
         let skey: string = Object.keys(value)[0];
         let str: any = Object.values(value)[0];
         let sfield: string = skey.split("_")[1];
+        // todo this need to be changed if we change the data structure
         let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
         sfield = this.fieldConverter(sfield);
         let regex: RegExp;
+        // todo regex part is problematic
         if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
-            regex = new RegExp("\D*" + str + "\D*");
+            regex = new RegExp("\\D\*" + str + "\\D\*");
         } else if (str.slice(0, 1) === "*") {
-            regex = new RegExp("\D*" + str);
+            regex = new RegExp("\\D\*" + str);
         } else if (str.slice(-1) === "*") {
-            regex = new RegExp(str + "\D*");
+            regex = new RegExp(str + "\\D\*");
         } else if (str.length === 0) {
-            regex = new RegExp("\D*");
+            regex = new RegExp("\\D\*");
         } else {
             regex = new RegExp(str);
         }
@@ -223,6 +225,7 @@ export default class InsightFacade implements IInsightFacade {
 
     }
 
+    // todo where cannot take more than one different key
     private validateWhere(q: any): boolean {
         let key: string = Object.keys(q)[0];
         let value: any = Object.values(q)[0];
