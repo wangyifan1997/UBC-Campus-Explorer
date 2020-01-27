@@ -3,7 +3,6 @@ import * as JSZip from "jszip";
 import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
 
-
 export default class DataHandler {
     private allId: string[];
     private allDataset: any;
@@ -13,7 +12,6 @@ export default class DataHandler {
     private allInsightDataset: InsightDataset[];
     private sectionCounter: number;
     // todo 所有读写要扫硬盘
-    // Constructor
     constructor() {
         this.allId = [];
         this.allDataset = {};
@@ -220,7 +218,6 @@ export default class DataHandler {
         }
     }
 
-
     public addToDataset(id: string, dataToBeAdd: { [id: string]: any }) {
         this.allDataset[id] = dataToBeAdd[id];
         // eslint-disable-next-line no-console
@@ -241,43 +238,7 @@ export default class DataHandler {
         return this.allDataset;
     }
 
-    public getJSZip(): JSZip {
-        return this.zip;
-    }
-
-    public getPath(): string {
-        return this.path;
-    }
-
-    public getFolder(): string {
-        return this.folder;
-    }
-
     public getAllInsightDataset(): InsightDataset[] {
         return this.allInsightDataset;
-    }
-
-    public setAllId(ids: string[]) {
-        this.allId = ids;
-    }
-
-    public setAllDataset(dataset: any) {
-        this.allDataset = dataset;
-    }
-
-    public setJSZip(jszip: JSZip) {
-        this.zip = jszip;
-    }
-
-    public setPath(dir: string) {
-        this.path = dir;
-    }
-
-    public setFolder(folderName: string) {
-        this.folder = folderName;
-    }
-
-    public setAllInsightDataset(set: InsightDataset[]) {
-        this.allInsightDataset = set;
     }
 }

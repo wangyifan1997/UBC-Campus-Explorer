@@ -70,10 +70,13 @@ export default class InsightFacade implements IInsightFacade {
                 || typeof query.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
             }
-            // todo 检查是否有excessive keys in query and options
-            // todo 都改完以后要把条件改成and
+            let keys: any[] = Object.keys(query);
+            for (let key of keys) {
+                if (key !== "OPTIONS" && key !== "WHERE") {
+                    return Promise.reject(new InsightError());
+                }
+            }
             if (this.validateWhere(query.WHERE) && this.validateOptions(query.OPTIONS)) {
-                // return Promise.resolve([this.validateWhere(query.WHERE), this.validateOptions(query.OPTIONS)]);
                 return this.findMatchingSections(query);
             } else {
                 return Promise.reject(new InsightError());
@@ -81,7 +84,6 @@ export default class InsightFacade implements IInsightFacade {
         } catch (err) {
             return Promise.reject(err);
         }
-
     }
 
     public listDatasets(): Promise<InsightDataset[]> {
@@ -90,7 +92,7 @@ export default class InsightFacade implements IInsightFacade {
 
     private findMatchingSections(q: any): Promise<any[]> {
         try {
-            let los: any[] = this.findMatchingWHERE(q.WHERE);
+            let los: any[] = this.findMatchingWhere(q.WHERE);
             if (los.length > 5000) {
                 return Promise.reject(new ResultTooLargeError());
             } else {
@@ -101,14 +103,22 @@ export default class InsightFacade implements IInsightFacade {
         }
     }
 
-    private findMatchingWHERE(q: any): any[] {
+    private findMatchingWhere(q: any): any[] {
+        if (Object.keys(q).length === 0) {
+            return this.dataHandler.getAllDataset()[this.idInQuery[0]];
+        } else {
+            return this.findMatchingFilter(q);
+        }
+    }
+
+    private findMatchingFilter(q: any): any[] {
         let key: string = Object.keys(q)[0];
         let value: any = Object.values(q)[0];
         switch (key) {
             case "AND":
                 let allANDReturns: Array<Set<any>> = [];
                 for (let innerObject of Object.values(q)) {
-                    allANDReturns.push(new Set(this.findMatchingWHERE(innerObject)));
+                    allANDReturns.push(new Set(this.findMatchingFilter(innerObject)));
                 }
                 let totalIntersection = allANDReturns[0];
                 for (let aSet of allANDReturns) {
@@ -118,12 +128,12 @@ export default class InsightFacade implements IInsightFacade {
             case "OR":
                 let allORReturns = new Set();
                 for (let innerObject of Object.values(q)) {
-                    allORReturns.add(new Set(this.findMatchingWHERE(innerObject)));
+                    allORReturns.add(new Set(this.findMatchingFilter(innerObject)));
                 }
                 return Array.from(allORReturns.values());
             case "NOT":
                 let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
-                let currSections = this.findMatchingWHERE(value);
+                let currSections = this.findMatchingFilter(value);
                 let result: any[] = [];
                 for (let sections of allSections) {
                     if (!currSections.includes(sections)) {
@@ -225,29 +235,50 @@ export default class InsightFacade implements IInsightFacade {
 
     }
 
-    // todo where cannot take more than one different key
     private validateWhere(q: any): boolean {
-        let key: string = Object.keys(q)[0];
-        let value: any = Object.values(q)[0];
-        switch (key) {
-            case "AND":
-            case "OR":
-                return this.validateANDOR(value);
-            case "NOT":
-                return this.validateNOT(value);
-            case "GT":
-            case "LT":
-            case "EQ":
-                return this.validateGTLTEQ(value);
-            case "IS":
-                return this.validateIS(value);
-            default:
-                return false;
+        if (Array.isArray(q)) {
+            return false;
+        } else {
+            if (Object.keys(q).length === 0) {
+                return true;
+            } else {
+                return this.validateFilter(q);
+            }
         }
     }
 
-    // todo 检查多余key
+
+    private validateFilter(q: any): boolean {
+        if (Object.keys(q).length !== 1) {
+            return false;
+        } else {
+            let key: string = Object.keys(q)[0];
+            let value: any = Object.values(q)[0];
+            switch (key) {
+                case "AND":
+                case "OR":
+                    return this.validateANDOR(value);
+                case "NOT":
+                    return this.validateNOT(value);
+                case "GT":
+                case "LT":
+                case "EQ":
+                    return this.validateGTLTEQ(value);
+                case "IS":
+                    return this.validateIS(value);
+                default:
+                    return false;
+            }
+        }
+    }
+
     private validateOptions(q: any): boolean {
+        let keys: any[] = Object.keys(q);
+        for (let key of keys) {
+            if (key !== "COLUMNS" && key !== "ORDER") {
+                return false;
+            }
+        }
         let mskeys: any = q.COLUMNS;
         if (typeof mskeys === "undefined") {
             return false;
@@ -305,7 +336,7 @@ export default class InsightFacade implements IInsightFacade {
         if (typeof value !== "object") {
             return false;
         }
-        return this.validateWhere(value);
+        return this.validateFilter(value);
     }
 
     private validateIS(value: any): boolean {
@@ -353,15 +384,19 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     private validateANDOR(value: any): boolean {
-        if (value.length < 1) {
+        if (!Array.isArray(value)) {
             return false;
-        }
-        for (let innerObject of value) {
-            if (!this.validateWhere(innerObject)) {
+        } else {
+            if (value.length < 1) {
                 return false;
             }
+            for (let innerObject of value) {
+                if (!this.validateFilter(innerObject)) {
+                    return false;
+                }
+            }
+            return true;
         }
-        return true;
     }
 
     private fieldConverter(field: string): string {
