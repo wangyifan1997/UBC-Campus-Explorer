@@ -62,6 +62,8 @@ export default class InsightFacade implements IInsightFacade {
 
     public performQuery(query: any): Promise<any[]> {
         try {
+            this.idInQuery = [];
+            this.fieldsInQuery = [];
             let parsedQuery: any = JSON.parse(query);
             if (typeof parsedQuery.WHERE === "undefined" || typeof parsedQuery.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
@@ -82,7 +84,113 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     private findMatchingSections(q: any): Promise<any[]> {
-        return Promise.reject("not implemented");
+        try {
+            let los: any[] = this.findMatchingWHERE(q.WHERE);
+            let result: any[] = this.findMatchingOPTIONS(q.OPTIONS, los);
+            return Promise.resolve(result);
+        } catch (e) {
+            return Promise.reject("not implemented");
+        }
+
+    }
+
+    private findMatchingWHERE(q: any): any[] {
+        let key: string = Object.keys(q)[0];
+        let value: any = Object.values(q)[0];
+        switch (key) {
+            case "AND":
+                let allANDReturns: Array<Set<any>> = [];
+                for (let innerObject of Object.values(q)) {
+                    allANDReturns.push(new Set(this.findMatchingWHERE(innerObject)));
+                }
+                let totalIntersection = allANDReturns[0];
+                for (let aSet of allANDReturns) {
+                    totalIntersection = new Set([...aSet].filter((x) => totalIntersection.has(x)));
+                }
+                return Array.from(totalIntersection.values());
+            case "OR":
+                let allORReturns = new Set();
+                for (let innerObject of Object.values(q)) {
+                    allORReturns.add(new Set(this.findMatchingWHERE(innerObject)));
+                }
+                return Array.from(allORReturns.values());
+            case "NOT":
+                break;
+            case "GT":
+                return this.findGTLTEQ(value, "GT");
+            case "LT":
+                return this.findGTLTEQ(value, "LT");
+            case "EQ":
+                return this.findGTLTEQ(value, "EQ");
+            case "IS":
+                return this.findIS(value);
+            default:
+                return [];
+        }
+    }
+
+    private findMatchingOPTIONS(q: any, los: any[]): any[] {
+        return [];
+    }
+
+    private findIS(value: any): any[] {
+        let result: any[] = [];
+        let skey: string = Object.keys(value)[0];
+        let str: any = Object.values(value)[0];
+        let sfield: string = skey.split("_")[1];
+        let allSections: any[] = this.handler.getAllDataset()[this.idInQuery[0]];
+        sfield = this.fieldConverter(sfield);
+        let regex: RegExp;
+        if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
+            regex = new RegExp("\D*" + str + "\D*");
+        } else if (str.slice(0, 1) === "*") {
+            regex = new RegExp("\D*" + str);
+        } else if (str.slice(-1) === "*") {
+            regex = new RegExp(str + "\D*");
+        } else {
+            regex = new RegExp(str);
+        }
+        for (let section of allSections) {
+            if (regex.test(section[sfield])) {
+                result.push(section);
+            }
+        }
+        return result;
+    }
+
+    private findGTLTEQ(value: any, type: string): any[] {
+        let result: any[] = [];
+        let mkey: string = Object.keys(value)[0];
+        let num: any = Object.values(value)[0];
+        let mfield: string = mkey.split("_")[1];
+        let allSections: any[] = this.handler.getAllDataset()[this.idInQuery[0]];
+        mfield = this.fieldConverter(mfield);
+        switch (type) {
+            case "GT":
+                for (let section of allSections) {
+                    if (section[mfield] > num) {
+                        result.push(section);
+                    }
+                }
+                return result;
+            case "LT":
+                for (let section of allSections) {
+                    if (section[mfield] < num) {
+                        result.push(section);
+                    }
+                }
+                return result;
+            case "EQ":
+                for (let section of allSections) {
+                    if (section[mfield] === num) {
+                        result.push(section);
+                    }
+                }
+                return result;
+            default:
+                return [];
+        }
+
     }
 
     private validateWhere(q: any): boolean {
@@ -168,8 +276,6 @@ export default class InsightFacade implements IInsightFacade {
         if (typeof value !== "object") {
             return false;
         }
-        // eslint-disable-next-line no-console
-        console.log(Object.keys(value).length);
         if (Object.keys(value).length !== 1) {
             return false;
         }
@@ -221,5 +327,32 @@ export default class InsightFacade implements IInsightFacade {
             }
         }
         return true;
+    }
+
+    private fieldConverter(field: string): string {
+        switch (field) {
+            case "dept":
+                return "Subject";
+            case "id":
+                return "Course";
+            case "avg":
+                return "Avg";
+            case "instructor":
+                return "Professor";
+            case "title":
+                return "Title";
+            case "pass":
+                return "Pass";
+            case "fail":
+                return "Fail";
+            case "audit":
+                return "Audit";
+            case "uuid":
+                return "id";
+            case "year":
+                return "Year";
+            default:
+                return undefined;
+        }
     }
 }

@@ -232,7 +232,7 @@ export default class DataHandler {
         return this.allId;
     }
 
-    public getAllDataset(): string[] {
+    public getAllDataset(): any {
         return this.allDataset;
     }
 
