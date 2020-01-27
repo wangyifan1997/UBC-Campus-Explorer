@@ -1,5 +1,5 @@
 import Log from "../Util";
-import {IInsightFacade, InsightDataset, InsightDatasetKind} from "./IInsightFacade";
+import {IInsightFacade, InsightDataset, InsightDatasetKind, ResultTooLargeError} from "./IInsightFacade";
 import {InsightError, NotFoundError} from "./IInsightFacade";
 import * as JSZip from "jszip";
 import {expect} from "chai";
@@ -7,6 +7,7 @@ import {JSZipObject} from "jszip";
 import {promises} from "dns";
 import * as fs from "fs-extra";
 import DataHandler from "./DataHandler";
+import QueryHandler from "./QueryHandler";
 
 /**
  * This is the main programmatic entry point for the project.
@@ -17,43 +18,44 @@ import DataHandler from "./DataHandler";
 // dev branch
 // muhan branch
 export default class InsightFacade implements IInsightFacade {
-    private handler: DataHandler;
+    private dataHandler: DataHandler;
+    private queryHandler: QueryHandler;
     private mfields: string[] = ["avg", "pass", "fail", "audit", "year"];
     private sfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
     private idInQuery: string[] = [];
     private fieldsInQuery: string[] = [];
 
     constructor() {
-        this.handler = new DataHandler();
-        this.handler.readDataset();
+        this.dataHandler = new DataHandler();
+        this.dataHandler.readDataset();
         Log.trace("InsightFacadeImpl::init()");
     }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
-        return this.handler.isIdOkToAdd(id).then(() => {
-            return this.handler.myLoadAsync(content);
+        return this.dataHandler.isIdOkToAdd(id).then(() => {
+            return this.dataHandler.myLoadAsync(content);
         }).then((zipData: JSZip) => {
-            return this.handler.checkCoursesFolder(zipData);
+            return this.dataHandler.checkCoursesFolder(zipData);
         }).then((zipData: JSZip) => {
-            return this.handler.loadAllFilesToAllPromises(zipData);
+            return this.dataHandler.loadAllFilesToAllPromises(zipData);
         }).then((result: string[]) => {
-            return this.handler.parseCourseJSON(result);
+            return this.dataHandler.parseCourseJSON(result);
         }).then((allCourses: string[]) => {
-            return this.handler.getAllSections(allCourses);
+            return this.dataHandler.getAllSections(allCourses);
         }).then((allSections: any[]) => {
-            this.handler.addId(id);
-            return this.handler.myWriteFile(id, allSections);
+            this.dataHandler.addId(id);
+            return this.dataHandler.myWriteFile(id, allSections);
         }).then((dataToBeAdd: any[]) => {
-            this.handler.addToDataset(id, dataToBeAdd);
-            return Promise.resolve(this.handler.getAllId());
+            this.dataHandler.addToDataset(id, dataToBeAdd);
+            return Promise.resolve(this.dataHandler.getAllId());
         }).catch((err: any) => {
             return Promise.reject(new InsightError());
         });
     }
 
     public removeDataset(id: string): Promise<string> {
-        return this.handler.isIdOkToDelete(id).then(() => {
-            this.handler.myDeleteDataset(id);
+        return this.dataHandler.isIdOkToDelete(id).then(() => {
+            this.dataHandler.myDeleteDataset(id);
             return Promise.resolve(id);
         }).catch((err: any) => {
             return Promise.reject(err);
@@ -64,37 +66,42 @@ export default class InsightFacade implements IInsightFacade {
         try {
             this.idInQuery = [];
             this.fieldsInQuery = [];
-            let parsedQuery: any = JSON.parse(query);
-            if (typeof parsedQuery.WHERE === "undefined" || typeof parsedQuery.OPTIONS === "undefined") {
+            if (typeof query.WHERE === "undefined" || typeof query.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
             }
-            if (this.validateWhere(parsedQuery.WHERE) && this.validateOptions(parsedQuery.OPTIONS)) {
-                return this.findMatchingSections(parsedQuery);
+            // todo 检查是否有excessive keys
+            if (this.validateWhere(query.WHERE) || this.validateOptions(query.OPTIONS)) { // should have been and
+                return Promise.resolve([this.validateWhere(query.WHERE), this.validateOptions(query.OPTIONS)]);
+                // return this.findMatchingSections(query);
             } else {
                 return Promise.reject(new InsightError());
             }
         } catch (err) {
-            return Promise.reject(new InsightError());
+            return Promise.reject(err);
         }
 
     }
 
     public listDatasets(): Promise<InsightDataset[]> {
-        return Promise.resolve(this.handler.getAllInsightDataset());
+        return Promise.resolve(this.dataHandler.getAllInsightDataset());
     }
 
     private findMatchingSections(q: any): Promise<any[]> {
         try {
             let los: any[] = this.findMatchingWHERE(q.WHERE);
-            let result: any[] = this.findMatchingOPTIONS(q.OPTIONS, los);
-            return Promise.resolve(result);
+            if (los.length > 5000) {
+                return Promise.reject(new ResultTooLargeError());
+            } else {
+                return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
+            }
         } catch (e) {
-            return Promise.reject("not implemented");
+            return Promise.reject(e);
         }
-
     }
 
     private findMatchingWHERE(q: any): any[] {
+        // eslint-disable-next-line no-console
+        console.log("in where");
         let key: string = Object.keys(q)[0];
         let value: any = Object.values(q)[0];
         switch (key) {
@@ -115,7 +122,15 @@ export default class InsightFacade implements IInsightFacade {
                 }
                 return Array.from(allORReturns.values());
             case "NOT":
-                break;
+                let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
+                let currSections = this.findMatchingWHERE(value);
+                let result: any[] = [];
+                for (let sections of allSections) {
+                    if (!currSections.includes(sections)) {
+                        result.push(sections);
+                    }
+                }
+                return result;
             case "GT":
                 return this.findGTLTEQ(value, "GT");
             case "LT":
@@ -130,7 +145,20 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     private findMatchingOPTIONS(q: any, los: any[]): any[] {
-        return [];
+        let columns: string[] = q.COLUMNS;
+        let final: any[] = [];
+        let processedSection: { [key: string]: any };
+        for (let section of los) {
+            processedSection = {};
+            for (let column of columns) {
+                let data: any = section[this.fieldConverter(column.split("_")[1])];
+                processedSection[column] = data;
+            }
+            final.push(processedSection);
+        }
+        let orderKey: string = q.ORDER;
+        final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
+        return final;
     }
 
     private findIS(value: any): any[] {
@@ -138,7 +166,7 @@ export default class InsightFacade implements IInsightFacade {
         let skey: string = Object.keys(value)[0];
         let str: any = Object.values(value)[0];
         let sfield: string = skey.split("_")[1];
-        let allSections: any[] = this.handler.getAllDataset()[this.idInQuery[0]];
+        let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
         sfield = this.fieldConverter(sfield);
         let regex: RegExp;
         if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
@@ -147,6 +175,8 @@ export default class InsightFacade implements IInsightFacade {
             regex = new RegExp("\D*" + str);
         } else if (str.slice(-1) === "*") {
             regex = new RegExp(str + "\D*");
+        } else if (str.length === 0) {
+            regex = new RegExp("\D*");
         } else {
             regex = new RegExp(str);
         }
@@ -163,7 +193,7 @@ export default class InsightFacade implements IInsightFacade {
         let mkey: string = Object.keys(value)[0];
         let num: any = Object.values(value)[0];
         let mfield: string = mkey.split("_")[1];
-        let allSections: any[] = this.handler.getAllDataset()[this.idInQuery[0]];
+        let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
         mfield = this.fieldConverter(mfield);
         switch (type) {
             case "GT":
@@ -213,6 +243,7 @@ export default class InsightFacade implements IInsightFacade {
         }
     }
 
+    // todo 检查多余key
     private validateOptions(q: any): boolean {
         let mskeys: any = q.COLUMNS;
         if (typeof mskeys === "undefined") {
@@ -255,7 +286,7 @@ export default class InsightFacade implements IInsightFacade {
 
     private validateIdstring(idstring: string): boolean {
         if (this.idInQuery.length === 0) {
-            if (this.handler.getAllId().includes(idstring)) {
+            if (this.dataHandler.getAllId().includes(idstring)) {
                 this.idInQuery.push(idstring);
             } else {
                 return false;
@@ -289,8 +320,7 @@ export default class InsightFacade implements IInsightFacade {
             if (typeof str !== "string") {
                 return false;
             } else {
-                return (str.length > 0)
-                    && str.substring(1, str.length - 1).indexOf("*") === -1
+                return str.substring(1, str.length - 1).indexOf("*") === -1
                     && this.validateIdstring(idstring)
                     && this.sfields.includes(sfield);
             }
