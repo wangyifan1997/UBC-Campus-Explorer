@@ -97,6 +97,12 @@ describe("InsightFacade Add/Remove Dataset", function () {
     });
 
     after(function () {
+        try {
+            fs.removeSync(cacheDir);
+            fs.mkdirSync(cacheDir);
+        } catch (err) {
+            Log.error(err);
+        }
         Log.test(`After: ${this.test.parent.title}`);
     });
 
@@ -386,13 +392,14 @@ describe("InsightFacade PerformQuery", () => {
             const data = fs.readFileSync(ds.path).toString("base64");
             loadDatasetPromises.push(insightFacade.addDataset(id, data, ds.kind));
         }
-        return Promise.all(loadDatasetPromises).catch((err) => {
-            /* *IMPORTANT NOTE: This catch is to let this run even without the implemented addDataset,
-             * for the purposes of seeing all your tests run.
-             * TODO For C1, remove this catch block (but keep the Promise.all)
-             */
-            return Promise.resolve("HACK TO LET QUERIES RUN");
-        });
+        return Promise.all(loadDatasetPromises);
+        //     .catch((err) => {
+        //     /* *IMPORTANT NOTE: This catch is to let this run even without the implemented addDataset,
+        //      * for the purposes of seeing all your tests run.
+        //      * TODO For C1, remove this catch block (but keep the Promise.all)
+        //      */
+        //     return Promise.resolve("HACK TO LET QUERIES RUN");
+        // });
     });
 
     beforeEach(function () {

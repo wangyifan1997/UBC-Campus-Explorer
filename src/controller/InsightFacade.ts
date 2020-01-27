@@ -97,7 +97,7 @@ export default class InsightFacade implements IInsightFacade {
                 return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
             }
         } catch (e) {
-            throw e;
+            return Promise.reject(e);
         }
     }
 
@@ -284,6 +284,7 @@ export default class InsightFacade implements IInsightFacade {
             let msfield: string = splittedOrder[1];
             return (this.validateIdstring(idstring) && this.fieldsInQuery.includes(msfield));
         }
+        return true;
     }
 
 
@@ -291,6 +292,7 @@ export default class InsightFacade implements IInsightFacade {
         if (this.idInQuery.length === 0) {
             if (this.dataHandler.getAllId().includes(idstring)) {
                 this.idInQuery.push(idstring);
+                return true;
             } else {
                 return false;
             }
