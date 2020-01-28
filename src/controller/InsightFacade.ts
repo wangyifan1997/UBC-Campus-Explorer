@@ -176,25 +176,33 @@ export default class InsightFacade implements IInsightFacade {
         let skey: string = Object.keys(value)[0];
         let str: any = Object.values(value)[0];
         let sfield: string = skey.split("_")[1];
-        // todo this need to be changed if we change the data structure
         let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
         sfield = this.fieldConverter(sfield);
-        let regex: RegExp;
-        // todo regex part is problematic
         if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
-            regex = new RegExp("\\D\*" + str + "\\D\*");
+            for (let section of allSections) {
+                if (section[sfield].includes(str.slice(1, -1))) {
+                    result.push(section);
+                }
+            }
         } else if (str.slice(0, 1) === "*") {
-            regex = new RegExp("\\D\*" + str);
+            for (let section of allSections) {
+                if (section[sfield].endsWith(str.slice(1, ))) {
+                    result.push(section);
+                }
+            }
         } else if (str.slice(-1) === "*") {
-            regex = new RegExp(str + "\\D\*");
+            for (let section of allSections) {
+                if (section[sfield].startsWith(str.slice(0, -1))) {
+                    result.push(section);
+                }
+            }
         } else if (str.length === 0) {
-            regex = new RegExp("\\D\*");
+            return allSections;
         } else {
-            regex = new RegExp(str);
-        }
-        for (let section of allSections) {
-            if (regex.test(section[sfield])) {
-                result.push(section);
+            for (let section of allSections) {
+                if (section[sfield] === str) {
+                    result.push(section);
+                }
             }
         }
         return result;
