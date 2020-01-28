@@ -83,13 +83,20 @@ export default class DataHandler {
 
     public parseCourseJSON(contents: string[]): Promise<string[]> {
         let temp: any[] = [];
-        try {
-            for (let course of contents) {
+        for (let course of contents) {
+            try {
                 temp.push(JSON.parse(course));
+            } catch (e) {
+                continue;
             }
-        } catch (e) {
-            return Promise.reject(e);
         }
+        // try {
+        //     for (let course of contents) {
+        //         temp.push(JSON.parse(course));
+        //     }
+        // } catch (e) {
+        //     return Promise.reject(e);
+        // }
         return Promise.resolve(temp);
     }
 
@@ -111,8 +118,8 @@ export default class DataHandler {
                     }
                 }
             }
-            this.sectionCounter = allSections.length;
         }
+        this.sectionCounter = allSections.length;
         if (allSections.length === 0) {
             return Promise.reject(new InsightError());
         } else {
