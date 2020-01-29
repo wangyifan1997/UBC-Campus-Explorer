@@ -2,12 +2,9 @@ import Log from "../Util";
 import {IInsightFacade, InsightDataset, InsightDatasetKind, ResultTooLargeError} from "./IInsightFacade";
 import {InsightError, NotFoundError} from "./IInsightFacade";
 import * as JSZip from "jszip";
-import {expect} from "chai";
-import {JSZipObject} from "jszip";
-import {promises} from "dns";
-import * as fs from "fs-extra";
 import DataHandler from "./DataHandler";
-import QueryHandler from "./QueryHandler";
+import QueryValidator from "./QueryValidator";
+import QueryFinder from "./QueryFinder";
 
 /**
  * This is the main programmatic entry point for the project.
@@ -19,15 +16,14 @@ import QueryHandler from "./QueryHandler";
 // muhan branch
 export default class InsightFacade implements IInsightFacade {
     private dataHandler: DataHandler;
-    private queryHandler: QueryHandler;
-    private mfields: string[] = ["avg", "pass", "fail", "audit", "year"];
-    private sfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
-    private idInQuery: string[] = [];
-    private fieldsInQuery: string[] = [];
+    private queryValidator: QueryValidator;
+    private queryfinder: QueryFinder;
 
     constructor() {
         this.dataHandler = new DataHandler();
         this.dataHandler.readDataset();
+        this.queryValidator = new QueryValidator();
+        this.queryfinder = new QueryFinder();
         Log.trace("InsightFacadeImpl::init()");
     }
 
@@ -64,8 +60,6 @@ export default class InsightFacade implements IInsightFacade {
 
     public performQuery(query: any): Promise<any[]> {
         try {
-            this.idInQuery = [];
-            this.fieldsInQuery = [];
             if (typeof query.WHERE === "undefined"
                 || typeof query.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
@@ -76,8 +70,13 @@ export default class InsightFacade implements IInsightFacade {
                     return Promise.reject(new InsightError());
                 }
             }
-            if (this.validateWhere(query.WHERE) && this.validateOptions(query.OPTIONS)) {
-                return this.findMatchingSections(query);
+            this.queryValidator.setFieldsInQuery([]);
+            this.queryValidator.setIdInQuery([]);
+            this.queryValidator.setAllId(this.dataHandler.getAllId());
+            if (this.queryValidator.validateWhere(query.WHERE) && this.queryValidator.validateOptions(query.OPTIONS)) {
+                this.queryfinder.setAllDataset(this.dataHandler.getAllDataset());
+                this.queryfinder.setidInQuery(this.queryValidator.getIdInQuery()[0]);
+                return this.queryfinder.findMatchingSections(query);
             } else {
                 return Promise.reject(new InsightError());
             }
@@ -88,352 +87,5 @@ export default class InsightFacade implements IInsightFacade {
 
     public listDatasets(): Promise<InsightDataset[]> {
         return Promise.resolve(this.dataHandler.getAllInsightDataset());
-    }
-
-    private findMatchingSections(q: any): Promise<any[]> {
-        try {
-            let los: any[] = this.findMatchingWhere(q.WHERE);
-            if (los.length > 5000) {
-                return Promise.reject(new ResultTooLargeError());
-            } else {
-                return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
-            }
-        } catch (e) {
-            return Promise.reject(e);
-        }
-    }
-
-    private findMatchingWhere(q: any): any[] {
-        if (Object.keys(q).length === 0) {
-            return this.dataHandler.getAllDataset()[this.idInQuery[0]];
-        } else {
-            return this.findMatchingFilter(q);
-        }
-    }
-
-    private findMatchingFilter(q: any): any[] {
-        let key: string = Object.keys(q)[0];
-        let value: any = Object.values(q)[0];
-        switch (key) {
-            case "AND":
-                let allANDReturns: Array<Set<any>> = [];
-                for (let innerObject of value) {
-                    allANDReturns.push(new Set(this.findMatchingFilter(innerObject)));
-                }
-                let totalIntersection = allANDReturns[0];
-                for (let aSet of allANDReturns) {
-                    totalIntersection = new Set([...aSet].filter((x) => totalIntersection.has(x)));
-                }
-                return Array.from(totalIntersection.values());
-            case "OR":
-                let allORReturns = new Set();
-                for (let innerObject of value) {
-                    for (let section of this.findMatchingFilter(innerObject)) {
-                        allORReturns.add(section);
-                    }
-                    // allORReturns.add(new Set(this.findMatchingFilter(innerObject)));
-                }
-                return Array.from(allORReturns.values());
-            case "NOT":
-                let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
-                let currSections = this.findMatchingFilter(value);
-                let result: any[] = [];
-                for (let sections of allSections) {
-                    if (!currSections.includes(sections)) {
-                        result.push(sections);
-                    }
-                }
-                return result;
-            case "GT":
-                return this.findGTLTEQ(value, "GT");
-            case "LT":
-                return this.findGTLTEQ(value, "LT");
-            case "EQ":
-                return this.findGTLTEQ(value, "EQ");
-            case "IS":
-                return this.findIS(value);
-            default:
-                return [];
-        }
-    }
-
-    private findMatchingOPTIONS(q: any, los: any[]): any[] {
-        let columns: string[] = q.COLUMNS;
-        let final: any[] = [];
-        let processedSection: { [key: string]: any };
-        for (let section of los) {
-            processedSection = {};
-            for (let column of columns) {
-                let data: any = section[this.fieldConverter(column.split("_")[1])];
-                processedSection[column] = data;
-            }
-            final.push(processedSection);
-        }
-        let orderKey: string = q.ORDER;
-        final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
-        return final;
-    }
-
-    private findIS(value: any): any[] {
-        let result: any[] = [];
-        let skey: string = Object.keys(value)[0];
-        let str: any = Object.values(value)[0];
-        let sfield: string = skey.split("_")[1];
-        let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
-        sfield = this.fieldConverter(sfield);
-        if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
-            for (let section of allSections) {
-                if (section[sfield].includes(str.slice(1, -1))) {
-                    result.push(section);
-                }
-            }
-        } else if (str.slice(0, 1) === "*") {
-            for (let section of allSections) {
-                if (section[sfield].endsWith(str.slice(1, ))) {
-                    result.push(section);
-                }
-            }
-        } else if (str.slice(-1) === "*") {
-            for (let section of allSections) {
-                if (section[sfield].startsWith(str.slice(0, -1))) {
-                    result.push(section);
-                }
-            }
-        } else if (str.length === 0) {
-            return allSections;
-        } else {
-            for (let section of allSections) {
-                if (section[sfield] === str) {
-                    result.push(section);
-                }
-            }
-        }
-        return result;
-    }
-
-    private findGTLTEQ(value: any, type: string): any[] {
-        let result: any[] = [];
-        let mkey: string = Object.keys(value)[0];
-        let num: any = Object.values(value)[0];
-        let mfield: string = mkey.split("_")[1];
-        let allSections: any[] = this.dataHandler.getAllDataset()[this.idInQuery[0]];
-        mfield = this.fieldConverter(mfield);
-        switch (type) {
-            case "GT":
-                for (let section of allSections) {
-                    if (section[mfield] > num) {
-                        result.push(section);
-                    }
-                }
-                return result;
-            case "LT":
-                for (let section of allSections) {
-                    if (section[mfield] < num) {
-                        result.push(section);
-                    }
-                }
-                return result;
-            case "EQ":
-                for (let section of allSections) {
-                    if (section[mfield] === num) {
-                        result.push(section);
-                    }
-                }
-                return result;
-            default:
-                return [];
-        }
-
-    }
-
-    private validateWhere(q: any): boolean {
-        if (Array.isArray(q)) {
-            return false;
-        } else {
-            if (Object.keys(q).length === 0) {
-                return true;
-            } else {
-                return this.validateFilter(q);
-            }
-        }
-    }
-
-
-    private validateFilter(q: any): boolean {
-        if (Object.keys(q).length !== 1) {
-            return false;
-        } else {
-            let key: string = Object.keys(q)[0];
-            let value: any = Object.values(q)[0];
-            switch (key) {
-                case "AND":
-                case "OR":
-                    return this.validateANDOR(value);
-                case "NOT":
-                    return this.validateNOT(value);
-                case "GT":
-                case "LT":
-                case "EQ":
-                    return this.validateGTLTEQ(value);
-                case "IS":
-                    return this.validateIS(value);
-                default:
-                    return false;
-            }
-        }
-    }
-
-    private validateOptions(q: any): boolean {
-        let keys: any[] = Object.keys(q);
-        for (let key of keys) {
-            if (key !== "COLUMNS" && key !== "ORDER") {
-                return false;
-            }
-        }
-        let mskeys: any = q.COLUMNS;
-        if (typeof mskeys === "undefined") {
-            return false;
-        }
-        if (mskeys.length < 1) {
-            return false;
-        }
-        for (let mskey of mskeys) {
-            if (typeof mskey !== "string") {
-                return false;
-            }
-            let splittedmskeys: string[] = mskey.split("_");
-            if (splittedmskeys.length !== 2) {
-                return false;
-            }
-            let idstring: string = splittedmskeys[0];
-            let msfield: string = splittedmskeys[1];
-            if (!(this.validateIdstring(idstring)
-                && (this.mfields.includes(msfield) || this.sfields.includes(msfield)))) {
-                return false;
-            }
-            this.fieldsInQuery.push(msfield);
-        }
-        if (typeof q.ORDER !== "undefined") {
-            let order: any = q.ORDER;
-            if (typeof order !== "string") {
-                return false;
-            }
-            let splittedOrder: string[] = order.split("_");
-            if (splittedOrder.length !== 2) {
-                return false;
-            }
-            let idstring: string = splittedOrder[0];
-            let msfield: string = splittedOrder[1];
-            return (this.validateIdstring(idstring) && this.fieldsInQuery.includes(msfield));
-        }
-        return true;
-    }
-
-
-    private validateIdstring(idstring: string): boolean {
-        if (this.idInQuery.length === 0) {
-            if (this.dataHandler.getAllId().includes(idstring)) {
-                this.idInQuery.push(idstring);
-                return true;
-            } else {
-                return false;
-            }
-        } else {
-            return this.idInQuery.includes(idstring);
-        }
-    }
-
-    private validateNOT(value: any): boolean {
-        if (typeof value !== "object") {
-            return false;
-        }
-        return this.validateFilter(value);
-    }
-
-    private validateIS(value: any): boolean {
-        if (typeof value !== "object") {
-            return false;
-        }
-        if (Object.keys(value).length !== 1) {
-            return false;
-        }
-        let skey: string[] = Object.keys(value)[0].split("_");
-        if (skey.length !== 2) {
-            return false;
-        } else {
-            let idstring: string = skey[0];
-            let sfield: string = skey[1];
-            let str: any = Object.values(value)[0];
-            if (typeof str !== "string") {
-                return false;
-            } else {
-                return str.substring(1, str.length - 1).indexOf("*") === -1
-                    && this.validateIdstring(idstring)
-                    && this.sfields.includes(sfield);
-            }
-        }
-    }
-
-    private validateGTLTEQ(value: any): boolean {
-        if (typeof value !== "object") {
-            return false;
-        }
-        if (Object.keys(value).length !== 1) {
-            return false;
-        }
-        let mkey: string[] = Object.keys(value)[0].split("_");
-        if (mkey.length !== 2) {
-            return false;
-        } else {
-            let idstring: string = mkey[0];
-            let mfield: string = mkey[1];
-            let num: any = Object.values(value)[0];
-            return (typeof num === "number")
-                && this.validateIdstring(idstring)
-                && this.mfields.includes(mfield);
-        }
-    }
-
-    private validateANDOR(value: any): boolean {
-        if (!Array.isArray(value)) {
-            return false;
-        } else {
-            if (value.length < 1) {
-                return false;
-            }
-            for (let innerObject of value) {
-                if (!this.validateFilter(innerObject)) {
-                    return false;
-                }
-            }
-            return true;
-        }
-    }
-
-    private fieldConverter(field: string): string {
-        switch (field) {
-            case "dept":
-                return "Subject";
-            case "id":
-                return "Course";
-            case "avg":
-                return "Avg";
-            case "instructor":
-                return "Professor";
-            case "title":
-                return "Title";
-            case "pass":
-                return "Pass";
-            case "fail":
-                return "Fail";
-            case "audit":
-                return "Audit";
-            case "uuid":
-                return "id";
-            case "year":
-                return "Year";
-            default:
-                return undefined;
-        }
     }
 }
