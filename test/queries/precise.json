@@ -1,0 +1,52 @@
+{
+    "title": "a very specific query",
+    "query": {
+      "WHERE": {
+        "AND": [
+          {
+            "EQ": {
+              "courses_avg": 79.43
+            }
+          },
+          {
+            "EQ": {
+              "courses_fail": 0
+            }
+          },
+          {
+            "EQ": {
+              "courses_year": 2010
+            }
+          },
+          {
+            "EQ": {
+              "courses_pass": 79
+            }
+          },
+          {
+            "IS": {
+              "courses_dept": "cpsc"
+            }
+          }, 
+          {
+            "IS": {
+              "courses_id": "430"
+            }
+          }
+        ]
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_dept",
+          "courses_id",
+          "courses_avg",
+          "courses_fail",
+          "courses_year",
+          "courses_pass",
+          "courses_instructor"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": true,
+    "result":[{"courses_dept":"cpsc","courses_id":"430","courses_avg":79.43,"courses_fail":0,"courses_year":2010,"courses_pass":79,"courses_instructor":"luk, joseph"}]}

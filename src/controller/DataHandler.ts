@@ -11,6 +11,7 @@ export default class DataHandler {
     private folder: string;
     private allInsightDataset: InsightDataset[];
     private sectionCounter: number;
+
     // todo 所有读写要扫硬盘
     constructor() {
         this.allId = [];
@@ -107,14 +108,12 @@ export default class DataHandler {
             for (let section of sections) {
                 if (this.isValidSection(section)) {
                     section.id = section.id.toString();
-                    if (section.Year.toLowerCase() === "overall") {
+                    if (section.Section.toLowerCase() === "overall") {
                         section.Year = 1900;
+                    }
+                    section.Year = Number(section.Year);
+                    if (!isNaN(section.Year)) {
                         allSections.push(section);
-                    } else {
-                        section.Year = Number(section.Year);
-                        if (!isNaN(section.Year)) {
-                            allSections.push(section);
-                        }
                     }
                 }
             }
@@ -227,8 +226,6 @@ export default class DataHandler {
 
     public addToDataset(id: string, dataToBeAdd: { [id: string]: any }) {
         this.allDataset[id] = dataToBeAdd[id];
-        // eslint-disable-next-line no-console
-        console.log(this.allDataset);
         this.addInsightDataset(id);
     }
 
