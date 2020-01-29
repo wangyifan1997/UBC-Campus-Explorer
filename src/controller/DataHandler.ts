@@ -12,7 +12,6 @@ export default class DataHandler {
     private allInsightDataset: InsightDataset[];
     private sectionCounter: number;
 
-    // todo 所有读写要扫硬盘
     constructor() {
         this.allId = [];
         this.allDataset = {};
@@ -23,7 +22,7 @@ export default class DataHandler {
         this.sectionCounter = 0;
     }
 
-    public isIdIllegal(id: string): boolean {
+    private isIdIllegal(id: string): boolean {
         let count: number = 0;
         for (let letter of id) {
             if (letter === " ") {
@@ -36,20 +35,23 @@ export default class DataHandler {
         return count === id.length;
     }
 
-    public isIdAdded(id: string): boolean {
+    private isIdAdded(id: string): boolean {
         return this.allId.includes(id);
     }
 
     public isIdOkToAdd(id: string): Promise<any> {
-        return new Promise((resolve, reject) => {
-            if (this.isIdAdded(id) || this.isIdIllegal(id)) {
-                reject(InsightError);
-            }
-            resolve();
-        });
+        this.readDataset();
+        if (this.isIdIllegal(id)) {
+            return Promise.reject(new InsightError());
+        }
+        if (this.isIdAdded(id)) {
+            return Promise.reject(new NotFoundError());
+        }
+        return Promise.resolve();
     }
 
     public isIdOkToDelete(id: string): Promise<any> {
+        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -91,13 +93,6 @@ export default class DataHandler {
                 continue;
             }
         }
-        // try {
-        //     for (let course of contents) {
-        //         temp.push(JSON.parse(course));
-        //     }
-        // } catch (e) {
-        //     return Promise.reject(e);
-        // }
         return Promise.resolve(temp);
     }
 
@@ -126,7 +121,7 @@ export default class DataHandler {
         }
     }
 
-    public isValidSection(section: any): boolean {
+    private isValidSection(section: any): boolean {
         return (typeof section.Subject === "string"
             && typeof section.Course === "string"
             && typeof section.Avg === "number"
@@ -156,7 +151,7 @@ export default class DataHandler {
         return Promise.resolve(data);
     }
 
-    public myReadFile(path: string): any {
+    private myReadFile(path: string): any {
         let result: any = null;
         try {
             result = fs.readFileSync(path);
@@ -201,7 +196,7 @@ export default class DataHandler {
         this.allId.push(id);
     }
 
-    public removeId(id: string) {
+    private removeId(id: string) {
         for (let i: number = 0; i < this.allId.length; i++) {
             if (this.allId[i] === id) {
                 this.allId.splice(++i, 1);
@@ -229,20 +224,23 @@ export default class DataHandler {
         this.addInsightDataset(id);
     }
 
-    public removeFromDataset(id: string) {
+    private removeFromDataset(id: string) {
         delete this.allDataset[id];
         this.removeInsightDataset(id);
     }
 
     public getAllId(): string[] {
+        this.readDataset();
         return this.allId;
     }
 
     public getAllDataset(): any {
+        this.readDataset();
         return this.allDataset;
     }
 
     public getAllInsightDataset(): InsightDataset[] {
+        this.readDataset();
         return this.allInsightDataset;
     }
 }
