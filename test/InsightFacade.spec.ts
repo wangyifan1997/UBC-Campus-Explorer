@@ -423,8 +423,6 @@ describe("InsightFacade PerformQuery", () => {
                     insightFacade.performQuery(test.query).then((result) => {
                         TestUtil.checkQueryResult(test, result, done);
                     }).catch((err) => {
-                        // eslint-disable-next-line no-console
-                        console.log(err);
                         TestUtil.checkQueryResult(test, err, done);
                     });
                 });
