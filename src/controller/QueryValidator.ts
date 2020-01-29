@@ -15,49 +15,53 @@ export default class QueryValidator {
     }
 
     public validateOptions(q: any): boolean {
-        let keys: any[] = Object.keys(q);
-        for (let key of keys) {
-            if (key !== "COLUMNS" && key !== "ORDER") {
+        try {
+            let keys: any[] = Object.keys(q);
+            for (let key of keys) {
+                if (key !== "COLUMNS" && key !== "ORDER") {
+                    return false;
+                }
+            }
+            let mskeys: any = q.COLUMNS;
+            if (typeof mskeys === "undefined") {
                 return false;
             }
+            if (mskeys.length < 1) {
+                return false;
+            }
+            for (let mskey of mskeys) {
+                if (typeof mskey !== "string") {
+                    return false;
+                }
+                let splittedmskeys: string[] = mskey.split("_");
+                if (splittedmskeys.length !== 2) {
+                    return false;
+                }
+                let idstring: string = splittedmskeys[0];
+                let msfield: string = splittedmskeys[1];
+                if (!(this.validateIdstring(idstring)
+                    && (this.mfields.includes(msfield) || this.sfields.includes(msfield)))) {
+                    return false;
+                }
+                this.fieldsInQuery.push(msfield);
+            }
+            if (typeof q.ORDER !== "undefined") {
+                let order: any = q.ORDER;
+                if (typeof order !== "string") {
+                    return false;
+                }
+                let splittedOrder: string[] = order.split("_");
+                if (splittedOrder.length !== 2) {
+                    return false;
+                }
+                let idstring: string = splittedOrder[0];
+                let msfield: string = splittedOrder[1];
+                return (this.validateIdstring(idstring) && this.fieldsInQuery.includes(msfield));
+            }
+            return true;
+        } catch (e) {
+            throw new InsightError();
         }
-        let mskeys: any = q.COLUMNS;
-        if (typeof mskeys === "undefined") {
-            return false;
-        }
-        if (mskeys.length < 1) {
-            return false;
-        }
-        for (let mskey of mskeys) {
-            if (typeof mskey !== "string") {
-                return false;
-            }
-            let splittedmskeys: string[] = mskey.split("_");
-            if (splittedmskeys.length !== 2) {
-                return false;
-            }
-            let idstring: string = splittedmskeys[0];
-            let msfield: string = splittedmskeys[1];
-            if (!(this.validateIdstring(idstring)
-                && (this.mfields.includes(msfield) || this.sfields.includes(msfield)))) {
-                return false;
-            }
-            this.fieldsInQuery.push(msfield);
-        }
-        if (typeof q.ORDER !== "undefined") {
-            let order: any = q.ORDER;
-            if (typeof order !== "string") {
-                return false;
-            }
-            let splittedOrder: string[] = order.split("_");
-            if (splittedOrder.length !== 2) {
-                return false;
-            }
-            let idstring: string = splittedOrder[0];
-            let msfield: string = splittedOrder[1];
-            return (this.validateIdstring(idstring) && this.fieldsInQuery.includes(msfield));
-        }
-        return true;
     }
 
     public validateWhere(q: any): boolean {
@@ -124,7 +128,7 @@ export default class QueryValidator {
             if (typeof str !== "string") {
                 return false;
             } else {
-                return str.substring(1, str.length - 1).indexOf("*") === -1
+                return (!str.slice(1, -1).includes("*"))
                     && this.validateIdstring(idstring)
                     && this.sfields.includes(sfield);
             }
