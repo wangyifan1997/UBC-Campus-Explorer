@@ -117,7 +117,7 @@ export default class InsightFacade implements IInsightFacade {
         switch (key) {
             case "AND":
                 let allANDReturns: Array<Set<any>> = [];
-                for (let innerObject of Object.values(q)) {
+                for (let innerObject of value) {
                     allANDReturns.push(new Set(this.findMatchingFilter(innerObject)));
                 }
                 let totalIntersection = allANDReturns[0];
@@ -127,8 +127,11 @@ export default class InsightFacade implements IInsightFacade {
                 return Array.from(totalIntersection.values());
             case "OR":
                 let allORReturns = new Set();
-                for (let innerObject of Object.values(q)) {
-                    allORReturns.add(new Set(this.findMatchingFilter(innerObject)));
+                for (let innerObject of value) {
+                    for (let section of this.findMatchingFilter(innerObject)) {
+                        allORReturns.add(section);
+                    }
+                    // allORReturns.add(new Set(this.findMatchingFilter(innerObject)));
                 }
                 return Array.from(allORReturns.values());
             case "NOT":
