@@ -154,8 +154,6 @@ export default class QueryValidator {
                     result.push(section);
                 }
             }
-        } else if (str.length === 0) {
-            return allSections;
         } else {
             for (let section of allSections) {
                 if (section[sfield] === str) {

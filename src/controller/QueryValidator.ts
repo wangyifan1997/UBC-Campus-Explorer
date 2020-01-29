@@ -61,14 +61,18 @@ export default class QueryValidator {
     }
 
     public validateWhere(q: any): boolean {
-        if (Array.isArray(q)) {
-            return false;
-        } else {
-            if (Object.keys(q).length === 0) {
-                return true;
+        try {
+            if (Array.isArray(q)) {
+                return false;
             } else {
-                return this.validateFilter(q);
+                if (Object.keys(q).length === 0) {
+                    return true;
+                } else {
+                    return this.validateFilter(q);
+                }
             }
+        } catch (e) {
+            throw new InsightError();
         }
     }
 
