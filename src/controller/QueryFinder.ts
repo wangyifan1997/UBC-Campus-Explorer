@@ -24,27 +24,35 @@ export default class QueryValidator {
     }
 
     private findMatchingOPTIONS(q: any, los: any[]): any[] {
-        let columns: string[] = q.COLUMNS;
-        let final: any[] = [];
-        let processedSection: { [key: string]: any };
-        for (let section of los) {
-            processedSection = {};
-            for (let column of columns) {
-                let data: any = section[this.fieldConverter(column.split("_")[1])];
-                processedSection[column] = data;
+        try {
+            let columns: string[] = q.COLUMNS;
+            let final: any[] = [];
+            let processedSection: { [key: string]: any };
+            for (let section of los) {
+                processedSection = {};
+                for (let column of columns) {
+                    let data: any = section[this.fieldConverter(column.split("_")[1])];
+                    processedSection[column] = data;
+                }
+                final.push(processedSection);
             }
-            final.push(processedSection);
+            let orderKey: string = q.ORDER;
+            final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
+            return final;
+        } catch (e) {
+            throw new InsightError("error in options");
         }
-        let orderKey: string = q.ORDER;
-        final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
-        return final;
     }
 
     private findMatchingWhere(q: any): any[] {
-        if (Object.keys(q).length === 0) {
-            return this.allDataset[this.idInQuery];
-        } else {
-            return this.findMatchingFilter(q);
+        try {
+            if (Object.keys(q).length === 0) {
+                return this.allDataset[this.idInQuery];
+            } else {
+                return this.findMatchingFilter(q);
+            }
+        } catch (e) {
+            throw new InsightError("error in where");
         }
     }
 

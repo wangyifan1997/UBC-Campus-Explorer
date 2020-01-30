@@ -60,7 +60,7 @@ export default class InsightFacade implements IInsightFacade {
 
     public performQuery(query: any): Promise<any[]> {
         try {
-            if (typeof query.WHERE === "undefined"
+            if (query === null || typeof query.WHERE === "undefined"
                 || typeof query.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
             }
