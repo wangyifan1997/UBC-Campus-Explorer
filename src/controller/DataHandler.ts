@@ -40,7 +40,11 @@ export default class DataHandler {
     }
 
     public isIdOkToAdd(id: string): Promise<any> {
-        this.readDataset();
+        try {
+            this.readDataset();
+        } catch (e) {
+            return Promise.reject(new InsightError());
+        }
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -51,7 +55,11 @@ export default class DataHandler {
     }
 
     public isIdOkToDelete(id: string): Promise<any> {
-        this.readDataset();
+        try {
+            this.readDataset();
+        } catch (e) {
+            return Promise.reject(new InsightError());
+        }
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -230,7 +238,6 @@ export default class DataHandler {
     }
 
     public getAllId(): string[] {
-        this.readDataset();
         return this.allId;
     }
 
