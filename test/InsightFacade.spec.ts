@@ -117,7 +117,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
         emptyZipWithNotCoursesFolder: "./test/data/emptyZipWithNotCoursesFolder.zip",
         zipWithCoursesFolderButInvalidFiles: "./test/data/zipWithCoursesFolderButInvalidFiles.zip",
         zipWithOneSection: "./test/data/zipWithOneSection.zip",
-        zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip"
+        zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip",
+        zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip"
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
@@ -220,6 +221,17 @@ describe("InsightFacade Add/Remove Dataset", function () {
         const id: string = "test1";
         const expected: string[] = [id];
         return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a mixed dataset", function () {
+        const id: string = "zipWithMixedFiles";
+        const expected: string[] = [id];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then(
             (result: string[]) => {
                 expect(result).to.deep.equal(expected);
             }).catch((err: any) => {
@@ -346,6 +358,16 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("should not add null id", function () {
+        const id: string = null;
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect.fail();
+            }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
     it("should not add dataset with invalid id with empty", function () {
         const id: string = "        ";
         return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
@@ -405,6 +427,15 @@ describe("InsightFacade Add/Remove Dataset", function () {
             expect.fail();
         }).catch((err: any) => {
             expect(err).to.be.instanceOf(NotFoundError);
+        });
+    });
+
+    it("remove null", () => {
+        const nonExistedId: string = null;
+        return insightFacade.removeDataset(nonExistedId).then((result: string) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
         });
     });
 

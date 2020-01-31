@@ -23,16 +23,20 @@ export default class DataHandler {
     }
 
     private isIdIllegal(id: string): boolean {
-        let count: number = 0;
-        for (let letter of id) {
-            if (letter === " ") {
-                count++;
+        if (id === null) {
+            return true;
+        } else {
+            let count: number = 0;
+            for (let letter of id) {
+                if (letter === " ") {
+                    count++;
+                }
+                if (letter === "_") {
+                    return true;
+                }
             }
-            if (letter === "_") {
-                return true;
-            }
+            return count === id.length;
         }
-        return count === id.length;
     }
 
     private isIdAdded(id: string): boolean {
