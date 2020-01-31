@@ -54,7 +54,11 @@ export default class InsightFacade implements IInsightFacade {
             this.dataHandler.myDeleteDataset(id);
             return Promise.resolve(id);
         }).catch((err: any) => {
-            return Promise.reject(err);
+            if (!(err instanceof InsightError) && !(err instanceof NotFoundError)) {
+                return Promise.reject(new InsightError());
+            } else {
+                return Promise.reject(err);
+            }
         });
     }
 
