@@ -102,7 +102,7 @@ describe("multiple InsightFacade add/remove test", function () {
             expect(err).to.be.instanceOf(InsightError);
         });
     });
-})
+});
 
 
 describe("InsightFacade Add/Remove Dataset", function () {
