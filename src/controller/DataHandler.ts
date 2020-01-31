@@ -23,16 +23,20 @@ export default class DataHandler {
     }
 
     private isIdIllegal(id: string): boolean {
-        let count: number = 0;
-        for (let letter of id) {
-            if (letter === " ") {
-                count++;
+        if (id === null) {
+            return true;
+        } else {
+            let count: number = 0;
+            for (let letter of id) {
+                if (letter === " ") {
+                    count++;
+                }
+                if (letter === "_") {
+                    return true;
+                }
             }
-            if (letter === "_") {
-                return true;
-            }
+            return count === id.length;
         }
-        return count === id.length;
     }
 
     private isIdAdded(id: string): boolean {
@@ -70,7 +74,11 @@ export default class DataHandler {
     }
 
     public myLoadAsync(content: string) {
-        return this.zip.loadAsync(content, {base64: true});
+        try {
+            return this.zip.loadAsync(content, {base64: true});
+        } catch (e) {
+            return Promise.reject(new InsightError());
+        }
     }
 
     public checkCoursesFolder(zipData: JSZip): Promise<any> {
@@ -83,7 +91,7 @@ export default class DataHandler {
 
     public loadAllFilesToAllPromises(zipData: JSZip): Promise<string[]> {
         let allFiles: string[] = [];
-        zipData.folder("courses").forEach((relativePath, file) => {
+        zipData.folder(this.folder).forEach((relativePath, file) => {
             allFiles.push(file.name);
         });
         let allPromises: any[] = allFiles.map((fileDir: string) => {
@@ -111,7 +119,8 @@ export default class DataHandler {
             for (let section of sections) {
                 if (this.isValidSection(section)) {
                     section.id = section.id.toString();
-                    if (section.Section.toLowerCase() === "overall") {
+                    if (typeof section.Section !== "undefined"
+                        && section.Section.toLowerCase() === "overall") {
                         section.Year = 1900;
                     }
                     section.Year = Number(section.Year);
@@ -189,9 +198,13 @@ export default class DataHandler {
     }
 
     public myDeleteDataset(id: string) {
-        fs.unlinkSync(this.path + "/" + id);
-        this.removeFromDataset(id);
-        this.removeId(id);
+        try {
+            fs.unlinkSync(this.path + "/" + id);
+            this.removeFromDataset(id);
+            this.removeId(id);
+        } catch (e) {
+            throw new InsightError();
+        }
     }
 
     private createDataToBeAdd(id: string, allSections: any[]): any {

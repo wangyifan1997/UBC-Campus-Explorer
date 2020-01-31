@@ -55,6 +55,55 @@ describe("Test helper methods", () => {
     });
 });
 
+describe("multiple InsightFacade add/remove test", function () {
+    const datasetsToLoad: { [id: string]: string } = {
+        courses: "./test/data/courses.zip",
+    };
+    let datasets: { [id: string]: string } = {};
+    let insightFacade1: InsightFacade;
+    let insightFacade2: InsightFacade;
+    const cacheDir = __dirname + "/../data";
+
+    before(function () {
+        // This section runs once and loads all datasets specified in the datasetsToLoad object
+        // into the datasets object
+        Log.test(`Before all`);
+        for (const id of Object.keys(datasetsToLoad)) {
+            datasets[id] = fs.readFileSync(datasetsToLoad[id]).toString("base64");
+        }
+    });
+
+    beforeEach(function () {
+        // This section resets the data directory (removing any cached data) and resets the InsightFacade instance
+        // This runs before each test, which should make each test independent from the previous one
+        Log.test(`BeforeTest: ${this.currentTest.title}`);
+        try {
+            fs.removeSync(cacheDir);
+            fs.mkdirSync(cacheDir);
+            insightFacade1 = new InsightFacade();
+            insightFacade2 = new InsightFacade();
+        } catch (err) {
+            Log.error(err);
+        }
+    });
+
+    it("2 should reject when 1 has added a dataset with same id", function () {
+        const expected: string[] = ["courses"];
+        const dataset: string = datasets["courses"];
+        return insightFacade1.addDataset("courses", dataset, InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail();
+        }).then(() => {
+            return insightFacade2.addDataset("courses", dataset, InsightDatasetKind.Courses);
+        }).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+});
+
 
 describe("InsightFacade Add/Remove Dataset", function () {
     // Reference any datasets you've added to test/data here and they will
@@ -68,7 +117,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
         emptyZipWithNotCoursesFolder: "./test/data/emptyZipWithNotCoursesFolder.zip",
         zipWithCoursesFolderButInvalidFiles: "./test/data/zipWithCoursesFolderButInvalidFiles.zip",
         zipWithOneSection: "./test/data/zipWithOneSection.zip",
-        zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip"
+        zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip",
+        zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip"
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
@@ -119,6 +169,33 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("should not add empty content", () => {
+        const id: string = "courses";
+        return insightFacade.addDataset(id, "", InsightDatasetKind.Courses).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add null content", () => {
+        const id: string = "courses";
+        return insightFacade.addDataset(id, null, InsightDatasetKind.Courses).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add undefined content", () => {
+        const id: string = "courses";
+        return insightFacade.addDataset(id, undefined, InsightDatasetKind.Courses).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
     it("Should list a dataset", () => {
         const id: string = "courses";
         const expected: InsightDataset[] = [{
@@ -145,8 +222,19 @@ describe("InsightFacade Add/Remove Dataset", function () {
         const expected: string[] = [id];
         return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
             (result: string[]) => {
-            expect(result).to.deep.equal(expected);
-        }).catch((err: any) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a mixed dataset", function () {
+        const id: string = "zipWithMixedFiles";
+        const expected: string[] = [id];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         });
     });
@@ -248,8 +336,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
         const expected: string[] = [id];
         return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
             (result: string[]) => {
-            expect(result).to.deep.equal(expected);
-        }).catch((err: any) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         }).then(() => {
             return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses);
@@ -270,8 +358,28 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("should not add null id", function () {
+        const id: string = null;
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect.fail();
+            }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
     it("should not add dataset with invalid id with empty", function () {
         const id: string = "        ";
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect.fail();
+            }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add dataset with invalid id with empty string", function () {
+        const id: string = "";
         return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
             (result: string[]) => {
                 expect.fail();
@@ -296,7 +404,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
-    it("should reject when removing a dataset that is not existing", () => {
+    it("should reject when removing a dataset that is not existed", () => {
         const id: string = "courses";
         const expected: string[] = [id];
         const nonExistedId: string = "noSuchId";
@@ -319,6 +427,15 @@ describe("InsightFacade Add/Remove Dataset", function () {
             expect.fail();
         }).catch((err: any) => {
             expect(err).to.be.instanceOf(NotFoundError);
+        });
+    });
+
+    it("remove null", () => {
+        const nonExistedId: string = null;
+        return insightFacade.removeDataset(nonExistedId).then((result: string) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
         });
     });
 
@@ -365,7 +482,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
  * You can still make tests the normal way, this is just a convenient tool for a majority of queries.
  */
 describe("InsightFacade PerformQuery", () => {
-    const datasetsToQuery: { [id: string]: {path: string, kind: InsightDatasetKind} } = {
+    const datasetsToQuery: { [id: string]: { path: string, kind: InsightDatasetKind } } = {
         courses: {path: "./test/data/courses.zip", kind: InsightDatasetKind.Courses},
     };
     let insightFacade: InsightFacade;
