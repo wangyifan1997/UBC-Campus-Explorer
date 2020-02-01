@@ -6,7 +6,6 @@ import * as fs from "fs-extra";
 export default class DataHandler {
     private allId: string[];
     private allDataset: any;
-    private zip: JSZip;
     private path: string;
     private folder: string;
     private allInsightDataset: InsightDataset[];
@@ -15,7 +14,6 @@ export default class DataHandler {
     constructor() {
         this.allId = [];
         this.allDataset = {};
-        this.zip = new JSZip();
         this.path = "./data";
         this.folder = "courses";
         this.allInsightDataset = [];
@@ -75,7 +73,8 @@ export default class DataHandler {
 
     public myLoadAsync(content: string) {
         try {
-            return this.zip.loadAsync(content, {base64: true});
+            let zip: JSZip = new JSZip();
+            return zip.loadAsync(content, {base64: true});
         } catch (e) {
             return Promise.reject(new InsightError());
         }

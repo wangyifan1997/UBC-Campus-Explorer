@@ -313,17 +313,17 @@ describe("InsightFacade Add/Remove Dataset", function () {
     });
 
     it("Should add two valid dataset with different ids", function () {
-        const id1: string = "test2";
-        const id2: string = "test3";
+        const id1: string = "courses";
+        const id2: string = "zipWithOneSection";
         const expected1: string[] = [id1];
         const expected2: string[] = [id1, id2];
-        return insightFacade.addDataset(id1, datasets["courses"], InsightDatasetKind.Courses).then(
+        return insightFacade.addDataset(id1, datasets[id1], InsightDatasetKind.Courses).then(
             (result: string[]) => {
                 expect(result).to.deep.equal(expected1);
             }).catch((err: any) => {
             expect.fail(err, expected1, "Should not have rejected");
         }).then(() => {
-            return insightFacade.addDataset(id2, datasets["courses"], InsightDatasetKind.Courses);
+            return insightFacade.addDataset(id2, datasets[id2], InsightDatasetKind.Courses);
         }).then((result: string[]) => {
             expect(result).to.deep.equal(expected2);
         }).catch((err: any) => {
