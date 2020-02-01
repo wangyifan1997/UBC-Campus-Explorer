@@ -85,7 +85,11 @@ export default class InsightFacade implements IInsightFacade {
                 return Promise.reject(new InsightError());
             }
         } catch (err) {
-            return Promise.reject(err);
+            if (!(err instanceof InsightError) && !(err instanceof ResultTooLargeError)) {
+                return Promise.reject(new InsightError());
+            } else {
+                return Promise.reject(err);
+            }
         }
     }
 
