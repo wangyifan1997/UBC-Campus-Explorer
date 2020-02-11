@@ -68,8 +68,7 @@ export default class InsightFacade implements IInsightFacade {
                 || typeof query.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
             }
-            let keys: any[] = Object.keys(query);
-            for (let key of keys) {
+            for (let key of Object.keys(query)) {
                 if (key !== "OPTIONS" && key !== "WHERE" && key !== "TRANSFORMATIONS") {
                     return Promise.reject(new InsightError());
                 }
