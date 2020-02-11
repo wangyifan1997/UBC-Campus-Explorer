@@ -1,82 +1,163 @@
 import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
 import DataHandler from "./DataHandler";
+import {type} from "os";
 
 export default class QueryValidator {
-    private mfields: string[] = ["avg", "pass", "fail", "audit", "year"];
-    private sfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
+    private mfields: string[] = ["avg", "pass", "fail", "audit", "year", "lat", "lon", "seats"];
+    private sfields: string[] = ["dept", "id", "instructor", "title", "uuid", "fullname", "shortname",
+        "number", "name", "address", "type", "furniture", "href"];
+
+    private mtoken: string[] = ["MAX", "MIN", "AVG", "SUM"];
+    private mstoken: string[] = ["COUNT"];
     private idInQuery: string[];
     private fieldsInQuery: string[];
     private allId: string[];
+    private transformationKey: string[];
 
     constructor() {
         this.idInQuery = [];
         this.fieldsInQuery = [];
         this.allId = [];
+        this.transformationKey = [];
     }
 
+    public validateTransformations(q: any): boolean {
+        if (typeof q.GROUP === "undefined" || typeof q.APPLY === "undefined" || Object.keys(q).length !== 2) {
+            return false;
+        }
+        return this.validateGROUP(q.GROUP) && this.validateAPPLY(q.APPLY);
+    }
+
+    private validateGROUP(q: any): boolean {
+        if (!Array.isArray(q) || q.length < 1) {
+            return false;
+        }
+        for (let key of q) {
+            let splittedKey: string[] = key.split("_");
+            if (splittedKey.length !== 2) {
+                return false;
+            }
+            if (!(this.validateIdstring(splittedKey[0])
+                && (this.mfields.includes(splittedKey[1]) || this.sfields.includes(splittedKey[1])))) {
+                return false;
+            }
+            this.transformationKey.push(key);
+        }
+        return true;
+    }
+
+    private validateAPPLY(q: any): boolean {
+        if (!Array.isArray(q) || q.length < 1) {
+            return false;
+        }
+        for (let applyrule of q) {
+            if (Array.isArray(applyrule) || Object.keys(applyrule).length > 1) {
+                return false;
+            }
+            let applykey: string = Object.keys(applyrule)[0];
+            let criteria: any = applyrule[applykey];
+            if (applykey.length === 0 || applykey.includes("_") || this.transformationKey.includes(applykey)) {
+                return false;
+            }
+            this.transformationKey.push(applykey);
+            if (Array.isArray(criteria) || Object.keys(criteria).length > 1) {
+                return false;
+            }
+            let applytoken: string = Object.keys(criteria)[0];
+            if (!this.mtoken.includes(applytoken) && !this.mstoken.includes(applytoken)) {
+                return false;
+            }
+            let key: string[] = criteria[applytoken].split("_");
+            if (key.length !== 2) {
+                return false;
+            }
+            if (this.mtoken.includes(applytoken)) {
+                if (!(this.validateIdstring(key[0]) && this.mfields.includes(key[1]))) {
+                    return false;
+                }
+            } else {
+                if (!(this.validateIdstring(key[0])
+                    && (this.sfields.includes(key[1]) || this.mfields.includes(key[1])))) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+
     public validateOptions(q: any): boolean {
-        try {
-            let keys: any[] = Object.keys(q);
-            for (let key of keys) {
-                if (key !== "COLUMNS" && key !== "ORDER") {
-                    return false;
-                }
-            }
-            let mskeys: any = q.COLUMNS;
-            if (typeof mskeys === "undefined") {
+        let keys: any[] = Object.keys(q);
+        for (let key of keys) {
+            if (key !== "COLUMNS" && key !== "ORDER") {
                 return false;
             }
-            if (mskeys.length < 1) {
-                return false;
-            }
-            for (let mskey of mskeys) {
-                if (typeof mskey !== "string") {
+        }
+        if (typeof q.ORDER !== "undefined") {
+            return this.validateColumns(q.COLUMNS) && this.validateOrder(q.ORDER);
+        } else {
+            return this.validateColumns(q.COLUMNS);
+        }
+    }
+
+    private validateColumns(q: any): boolean {
+        if (typeof q === "undefined" || q.length < 1) {
+            return false;
+        }
+        for (let mskey of q) {
+            if (this.transformationKey.length > 0) {
+                if (!this.transformationKey.includes(mskey)) {
                     return false;
                 }
+            } else {
                 let splittedmskeys: string[] = mskey.split("_");
                 if (splittedmskeys.length !== 2) {
                     return false;
                 }
-                let idstring: string = splittedmskeys[0];
-                let msfield: string = splittedmskeys[1];
-                if (!(this.validateIdstring(idstring)
-                    && (this.mfields.includes(msfield) || this.sfields.includes(msfield)))) {
+                if (!(this.validateIdstring(splittedmskeys[0])
+                    && (this.mfields.includes(splittedmskeys[1]) || this.sfields.includes(splittedmskeys[1])))) {
                     return false;
                 }
-                this.fieldsInQuery.push(msfield);
             }
-            if (typeof q.ORDER !== "undefined") {
-                let order: any = q.ORDER;
-                if (typeof order !== "string") {
+            this.fieldsInQuery.push(mskey);
+        }
+        return true;
+    }
+
+    private validateOrder(q: any): boolean {
+        if (typeof q === "string") {
+            return this.fieldsInQuery.includes(q);
+        } else if (Array.isArray(q)) {
+            return false;
+        } else {
+            if (typeof q.dir === "undefined" || typeof q.keys === "undefined" || Object.keys(q).length !== 2) {
+                return false;
+            }
+            if (q.dir !== "UP" && q.dir !== "DOWN") {
+                return false;
+            }
+            let keys: any = q.keys;
+            if (!Array.isArray(keys) || keys.length < 1) {
+                return false;
+            }
+            for (let anykey of keys) {
+                if (!this.fieldsInQuery.includes(anykey)) {
                     return false;
                 }
-                let splittedOrder: string[] = order.split("_");
-                if (splittedOrder.length !== 2) {
-                    return false;
-                }
-                let idstring: string = splittedOrder[0];
-                let msfield: string = splittedOrder[1];
-                return (this.validateIdstring(idstring) && this.fieldsInQuery.includes(msfield));
             }
             return true;
-        } catch (e) {
-            throw new InsightError();
         }
     }
 
     public validateWhere(q: any): boolean {
-        try {
-            if (Array.isArray(q)) {
-                return false;
+        if (Array.isArray(q)) {
+            return false;
+        } else {
+            if (Object.keys(q).length === 0) {
+                return true;
             } else {
-                if (Object.keys(q).length === 0) {
-                    return true;
-                } else {
-                    return this.validateFilter(q);
-                }
+                return this.validateFilter(q);
             }
-        } catch (e) {
-            throw new InsightError();
         }
     }
 
@@ -198,5 +279,9 @@ export default class QueryValidator {
 
     public setFieldsInQuery(field: string[]) {
         this.fieldsInQuery = field;
+    }
+
+    public setTransformationKey(key: string[]) {
+        this.transformationKey = key;
     }
 }

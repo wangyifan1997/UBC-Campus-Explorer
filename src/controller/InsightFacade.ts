@@ -70,20 +70,29 @@ export default class InsightFacade implements IInsightFacade {
             }
             let keys: any[] = Object.keys(query);
             for (let key of keys) {
-                if (key !== "OPTIONS" && key !== "WHERE") {
+                if (key !== "OPTIONS" && key !== "WHERE" && key !== "TRANSFORMATIONS") {
                     return Promise.reject(new InsightError());
                 }
             }
             this.queryValidator.setFieldsInQuery([]);
             this.queryValidator.setIdInQuery([]);
+            this.queryValidator.setTransformationKey([]);
             this.queryValidator.setAllId(this.dataHandler.getAllId());
-            if (this.queryValidator.validateWhere(query.WHERE) && this.queryValidator.validateOptions(query.OPTIONS)) {
-                this.queryfinder.setAllDataset(this.dataHandler.getAllDataset());
-                this.queryfinder.setidInQuery(this.queryValidator.getIdInQuery()[0]);
-                return this.queryfinder.findMatchingSections(query);
+            if (typeof query.TRANSFORMATIONS !== "undefined") {
+                if (!(this.queryValidator.validateWhere(query.WHERE)
+                    && this.queryValidator.validateTransformations(query.TRANSFORMATIONS)
+                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                    return Promise.reject(new InsightError());
+                }
             } else {
-                return Promise.reject(new InsightError());
+                if (!(this.queryValidator.validateWhere(query.WHERE)
+                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                    return Promise.reject(new InsightError());
+                }
             }
+            this.queryfinder.setAllDataset(this.dataHandler.getAllDataset());
+            this.queryfinder.setidInQuery(this.queryValidator.getIdInQuery()[0]);
+            return this.queryfinder.findMatchingSections(query);
         } catch (err) {
             if (!(err instanceof InsightError) && !(err instanceof ResultTooLargeError)) {
                 return Promise.reject(new InsightError());

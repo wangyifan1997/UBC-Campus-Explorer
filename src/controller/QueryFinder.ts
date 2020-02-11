@@ -199,14 +199,6 @@ export default class QueryValidator {
         }
     }
 
-    public getIdInQuery(): string {
-        return this.idInQuery;
-    }
-
-    public getAllDataset(): string[] {
-        return this.allDataset;
-    }
-
     public setAllDataset(data: any) {
         this.allDataset = data;
     }
