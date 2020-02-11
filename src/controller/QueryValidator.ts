@@ -188,14 +188,6 @@ export default class QueryValidator {
         return this.idInQuery;
     }
 
-    public getFieldsInQuery(): string[] {
-        return this.fieldsInQuery;
-    }
-
-    public getAllId(): string[] {
-        return this.allId;
-    }
-
     public setAllId(id: string[]) {
         this.allId = id;
     }
