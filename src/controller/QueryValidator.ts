@@ -1,7 +1,7 @@
 import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
 import DataHandler from "./DataHandler";
 import {type} from "os";
-
+// TODO 检查当前query的dataset的field有哪些
 export default class QueryValidator {
     private mfields: string[] = ["avg", "pass", "fail", "audit", "year", "lat", "lon", "seats"];
     private sfields: string[] = ["dept", "id", "instructor", "title", "uuid", "fullname", "shortname",
@@ -9,10 +9,10 @@ export default class QueryValidator {
 
     private mtoken: string[] = ["MAX", "MIN", "AVG", "SUM"];
     private mstoken: string[] = ["COUNT"];
-    private idInQuery: string[];
-    private fieldsInQuery: string[];
-    private allId: string[];
-    private transformationKey: string[];
+    private idInQuery: string[]; // make sure the query only has one id
+    private fieldsInQuery: string[]; // all keys appeared in columns after being validated
+    private allId: string[]; // the id of datasets that have been added so far
+    private transformationKey: string[]; // keys appeared in transformation, if there is a transformation
 
     constructor() {
         this.idInQuery = [];
@@ -30,7 +30,7 @@ export default class QueryValidator {
 
     private validateGROUP(q: any): boolean {
         if (!Array.isArray(q) || q.length < 1) {
-            return false;
+            return false; // q should be an object, and should has at least one element
         }
         for (let key of q) {
             let splittedKey: string[] = key.split("_");
@@ -41,14 +41,14 @@ export default class QueryValidator {
                 && (this.mfields.includes(splittedKey[1]) || this.sfields.includes(splittedKey[1])))) {
                 return false;
             }
-            this.transformationKey.push(key);
+            this.transformationKey.push(key); // if the key is valid, push it to transformationKey
         }
         return true;
     }
 
     private validateAPPLY(q: any): boolean {
         if (!Array.isArray(q) || q.length < 1) {
-            return false;
+            return false; // q should be an array, and should have at least one element
         }
         for (let applyrule of q) {
             if (Array.isArray(applyrule) || Object.keys(applyrule).length > 1) {
@@ -217,10 +217,7 @@ export default class QueryValidator {
     }
 
     private validateGTLTEQ(value: any): boolean {
-        if (typeof value !== "object") {
-            return false;
-        }
-        if (Object.keys(value).length !== 1) {
+        if (typeof value !== "object" || Object.keys(value).length !== 1) {
             return false;
         }
         let mkey: string[] = Object.keys(value)[0].split("_");
@@ -237,19 +234,15 @@ export default class QueryValidator {
     }
 
     private validateANDOR(value: any): boolean {
-        if (!Array.isArray(value)) {
+        if (!Array.isArray(value) || value.length < 1) {
             return false;
-        } else {
-            if (value.length < 1) {
+        }
+        for (let innerObject of value) {
+            if (!this.validateFilter(innerObject)) {
                 return false;
             }
-            for (let innerObject of value) {
-                if (!this.validateFilter(innerObject)) {
-                    return false;
-                }
-            }
-            return true;
         }
+        return true;
     }
 
     private validateIdstring(idstring: string): boolean {
