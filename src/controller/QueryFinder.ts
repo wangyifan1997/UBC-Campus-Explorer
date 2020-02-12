@@ -29,7 +29,8 @@ export default class QueryValidator {
         for (let section of los) {
             let marker: string = ""; // marker is the combined string of all the corresponding values in group keys
             for (let key of group) {
-                marker += section[this.fieldConverter(key.split("_")[1])];
+                // marker += section[this.fieldConverter(key.split("_")[1])];
+                marker += section[key];
             }
             if (!temp[marker]) {
                 temp[marker] = [section];
@@ -46,13 +47,15 @@ export default class QueryValidator {
         for (let cluster of Object.values(temp)) {
             let grouped: any = {};
             for (let key of group) {
-                let field: string = this.fieldConverter(key.split("_")[1]);
-                grouped[field] = cluster[0][field];
+                // let field: string = this.fieldConverter(key.split("_")[1]);
+                // grouped[field] = cluster[0][field];
+                grouped[key] = cluster[0][key];
             }
             for (let applyRule of apply) {
                 let applyKey: string = Object.keys(applyRule)[0];
                 let applyToken: string = Object.keys(applyRule[applyKey])[0];
-                let k: string = this.fieldConverter(applyRule[applyKey][applyToken].split("_")[1]);
+                // let k: string = this.fieldConverter(applyRule[applyKey][applyToken].split("_")[1]);
+                let k: string = applyRule[applyKey][applyToken];
                 switch (applyToken) {
                     case "MAX":
                         let max: number = Number.NEGATIVE_INFINITY;
@@ -108,7 +111,8 @@ export default class QueryValidator {
                 if (!column.includes("_")) {
                     data = section[column];
                 } else {
-                    data = section[this.fieldConverter(column.split("_")[1])];
+                    // data = section[this.fieldConverter(column.split("_")[1])];
+                    data = section[column];
                 }
                 processedSection[column] = data;
             }
@@ -194,27 +198,27 @@ export default class QueryValidator {
         let result: any[] = [];
         let mkey: string = Object.keys(value)[0];
         let num: any = Object.values(value)[0];
-        let mfield: string = mkey.split("_")[1];
+        // let mfield: string = mkey.split("_")[1];
         let allSections: any[] = this.allDataset[this.idInQuery];
-        mfield = this.fieldConverter(mfield);
+        // mfield = this.fieldConverter(mfield);
         switch (type) {
             case "GT":
                 for (let section of allSections) {
-                    if (section[mfield] > num) {
+                    if (section[mkey] > num) { // changed
                         result.push(section);
                     }
                 }
                 return result;
             case "LT":
                 for (let section of allSections) {
-                    if (section[mfield] < num) {
+                    if (section[mkey] < num) { // changed
                         result.push(section);
                     }
                 }
                 return result;
             case "EQ":
                 for (let section of allSections) {
-                    if (section[mfield] === num) {
+                    if (section[mkey] === num) { // changed
                         result.push(section);
                     }
                 }
@@ -229,30 +233,30 @@ export default class QueryValidator {
         let result: any[] = [];
         let skey: string = Object.keys(value)[0];
         let str: any = Object.values(value)[0];
-        let sfield: string = skey.split("_")[1];
+        // let sfield: string = skey.split("_")[1];
         let allSections: any[] = this.allDataset[this.idInQuery];
-        sfield = this.fieldConverter(sfield);
+        // sfield = this.fieldConverter(sfield);
         if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
             for (let section of allSections) {
-                if (section[sfield].includes(str.slice(1, -1))) {
+                if (section[skey].includes(str.slice(1, -1))) { // changed
                     result.push(section);
                 }
             }
         } else if (str.slice(0, 1) === "*") {
             for (let section of allSections) {
-                if (section[sfield].endsWith(str.slice(1,))) {
+                if (section[skey].endsWith(str.slice(1, ))) { // changed
                     result.push(section);
                 }
             }
         } else if (str.slice(-1) === "*") {
             for (let section of allSections) {
-                if (section[sfield].startsWith(str.slice(0, -1))) {
+                if (section[skey].startsWith(str.slice(0, -1))) { // changed
                     result.push(section);
                 }
             }
         } else {
             for (let section of allSections) {
-                if (section[sfield] === str) {
+                if (section[skey] === str) { // changed
                     result.push(section);
                 }
             }
@@ -260,32 +264,32 @@ export default class QueryValidator {
         return result;
     }
 
-    private fieldConverter(field: string): string {     // TODO 加rooms的convert
-        switch (field) {
-            case "dept":
-                return "Subject";
-            case "id":
-                return "Course";
-            case "avg":
-                return "Avg";
-            case "instructor":
-                return "Professor";
-            case "title":
-                return "Title";
-            case "pass":
-                return "Pass";
-            case "fail":
-                return "Fail";
-            case "audit":
-                return "Audit";
-            case "uuid":
-                return "id";
-            case "year":
-                return "Year";
-            default:
-                return undefined;
-        }
-    }
+    // private fieldConverter(field: string): string {     // TODO 加rooms的convert
+    //     switch (field) {
+    //         case "dept":
+    //             return "Subject";
+    //         case "id":
+    //             return "Course";
+    //         case "avg":
+    //             return "Avg";
+    //         case "instructor":
+    //             return "Professor";
+    //         case "title":
+    //             return "Title";
+    //         case "pass":
+    //             return "Pass";
+    //         case "fail":
+    //             return "Fail";
+    //         case "audit":
+    //             return "Audit";
+    //         case "uuid":
+    //             return "id";
+    //         case "year":
+    //             return "Year";
+    //         default:
+    //             return undefined;
+    //     }
+    // }
 
     public setAllDataset(data: any) {
         this.allDataset = data;

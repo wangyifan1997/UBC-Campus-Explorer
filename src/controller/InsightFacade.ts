@@ -37,7 +37,7 @@ export default class InsightFacade implements IInsightFacade {
         }).then((result: string[]) => {
             return this.dataHandler.parseCourseJSON(result);
         }).then((allCourses: string[]) => {
-            return this.dataHandler.getAllSections(allCourses);
+            return this.dataHandler.getAllSections(allCourses, id);
         }).then((allSections: any[]) => {
             this.dataHandler.addId(id);
             return this.dataHandler.myWriteFile(id, allSections);

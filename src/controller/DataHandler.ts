@@ -111,7 +111,7 @@ export default class DataHandler {
         return Promise.resolve(temp);
     }
 
-    public getAllSections(allCourses: any[]): Promise<any> {
+    public getAllSections(allCourses: any[], id: string): Promise<any> {
         let allSections: any[] = [];
         for (let course of allCourses) {
             let sections: any[] = course.result;
@@ -124,6 +124,8 @@ export default class DataHandler {
                     }
                     section.Year = Number(section.Year);
                     if (!isNaN(section.Year)) {
+                        // allSections.push(section);
+                        section = this.convertSection(section, id);
                         allSections.push(section);
                     }
                 }
@@ -135,6 +137,47 @@ export default class DataHandler {
         } else {
             return Promise.resolve(allSections);
         }
+    }
+
+    private convertSection(section: any, id: string): any {
+        let newSection: any = {};
+        for (let key of Object.keys(section)) {
+            switch (key) {
+                case "Subject":
+                    newSection[id + "_" + "dept"] = section[key];
+                    continue;
+                case "Course":
+                    newSection[id + "_" + "id"] = section[key];
+                    continue;
+                case "Avg":
+                    newSection[id + "_" + "avg"] = section[key];
+                    continue;
+                case "Professor":
+                    newSection[id + "_" + "instructor"] = section[key];
+                    continue;
+                case "Title":
+                    newSection[id + "_" + "title"] = section[key];
+                    continue;
+                case "Pass":
+                    newSection[id + "_" + "pass"] = section[key];
+                    continue;
+                case "Fail":
+                    newSection[id + "_" + "fail"] = section[key];
+                    continue;
+                case "Audit":
+                    newSection[id + "_" + "audit"] = section[key];
+                    continue;
+                case "id":
+                    newSection[id + "_" + "uuid"] = section[key];
+                    continue;
+                case "Year":
+                    newSection[id + "_" + "year"] = section[key];
+                    continue;
+                default:
+                    continue;
+            }
+        }
+        return newSection;
     }
 
     private isValidSection(section: any): boolean {

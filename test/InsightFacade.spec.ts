@@ -44,7 +44,7 @@ describe("Test helper methods", () => {
         "\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7,\"tier_ten\":0,\"High\":99,\"Course\":\"160\"," +
         "\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc\",\"Subject\":\"apsc\"}]}"];
         return dataHandler.parseCourseJSON(course1).then((result: string[]) => {
-            return dataHandler.getAllSections(result);
+            return dataHandler.getAllSections(result, "courses");
         }).catch((err: any) => {
             expect.fail("should not have rejected");
         }).then((allSections: any[]) => {
