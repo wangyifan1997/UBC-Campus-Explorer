@@ -225,8 +225,8 @@ export default class DataHandler {
         }
     }
 
-    private addInsightDataset(id: string) {
-        let data: InsightDataset = {id: id, kind: InsightDatasetKind.Courses, numRows: this.sectionCounter};
+    private addInsightDataset(id: string, kind: InsightDatasetKind) {
+        let data: InsightDataset = {id: id, kind: kind, numRows: this.sectionCounter};
         this.allInsightDataset.push(data);
     }
 
@@ -239,9 +239,9 @@ export default class DataHandler {
         }
     }
 
-    public addToDataset(id: string, dataToBeAdd: { [id: string]: any }) {
+    public addToDataset(id: string, kind: InsightDatasetKind, dataToBeAdd: { [id: string]: any }) {
         this.allDataset[id] = dataToBeAdd[id];
-        this.addInsightDataset(id);
+        this.addInsightDataset(id, kind);
     }
 
     private removeFromDataset(id: string) {

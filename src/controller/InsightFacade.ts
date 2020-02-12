@@ -42,7 +42,7 @@ export default class InsightFacade implements IInsightFacade {
             this.dataHandler.addId(id);
             return this.dataHandler.myWriteFile(id, allSections);
         }).then((dataToBeAdd: any[]) => {
-            this.dataHandler.addToDataset(id, dataToBeAdd);
+            this.dataHandler.addToDataset(id, kind, dataToBeAdd);
             return Promise.resolve(this.dataHandler.getAllId());
         }).catch((err: any) => {
             return Promise.reject(new InsightError());
