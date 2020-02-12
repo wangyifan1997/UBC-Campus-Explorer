@@ -1,24 +1,25 @@
-import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
-import DataHandler from "./DataHandler";
-import {type} from "os";
-// TODO 检查当前query的dataset的field有哪些
-export default class QueryValidator {
-    private mfields: string[] = ["avg", "pass", "fail", "audit", "year", "lat", "lon", "seats"];
-    private sfields: string[] = ["dept", "id", "instructor", "title", "uuid", "fullname", "shortname",
-        "number", "name", "address", "type", "furniture", "href"];
+import {InsightDataset, InsightDatasetKind} from "./IInsightFacade";
 
+export default class QueryValidator {
+    private coursemfields: string[] = ["avg", "pass", "fail", "audit", "year"];
+    private coursesfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
+    private roommfields: string[] = ["lat", "lon", "seats"];
+    private roomsfields: string[] = ["fullname", "shortname", "number", "name", "address", "type", "furniture", "href"];
     private mtoken: string[] = ["MAX", "MIN", "AVG", "SUM"];
     private mstoken: string[] = ["COUNT"];
     private idInQuery: string[]; // make sure the query only has one id
     private fieldsInQuery: string[]; // all keys appeared in columns after being validated
-    private allId: string[]; // the id of datasets that have been added so far
     private transformationKey: string[]; // keys appeared in transformation, if there is a transformation
+    private allInsightDataset: InsightDataset[];
+    private mfields: string[];
+    private sfields: string[];
 
     constructor() {
         this.idInQuery = [];
         this.fieldsInQuery = [];
-        this.allId = [];
+        // this.allId = [];
         this.transformationKey = [];
+        this.allInsightDataset = [];
     }
 
     public validateTransformations(q: any): boolean {
@@ -247,12 +248,20 @@ export default class QueryValidator {
 
     private validateIdstring(idstring: string): boolean {
         if (this.idInQuery.length === 0) {
-            if (this.allId.includes(idstring)) {
-                this.idInQuery.push(idstring);
-                return true;
-            } else {
-                return false;
+            for (let insightDataset of this.allInsightDataset) {
+                if (insightDataset.id === idstring) {
+                    this.idInQuery.push(idstring);
+                    if (insightDataset.kind === InsightDatasetKind.Courses) {
+                        this.mfields = this.coursemfields;
+                        this.sfields = this.coursesfields;
+                    } else {
+                        this.mfields = this.roommfields;
+                        this.sfields = this.roomsfields;
+                    }
+                    return true;
+                }
             }
+            return false;
         } else {
             return this.idInQuery.includes(idstring);
         }
@@ -260,10 +269,6 @@ export default class QueryValidator {
 
     public getIdInQuery(): string[] {
         return this.idInQuery;
-    }
-
-    public setAllId(id: string[]) {
-        this.allId = id;
     }
 
     public setIdInQuery(id: string[]) {
@@ -276,5 +281,9 @@ export default class QueryValidator {
 
     public setTransformationKey(key: string[]) {
         this.transformationKey = key;
+    }
+
+    public setAllInsightDataset(allInsightDataset: InsightDataset[]) {
+        this.allInsightDataset = allInsightDataset;
     }
 }

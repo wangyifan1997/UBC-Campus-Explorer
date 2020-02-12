@@ -76,7 +76,7 @@ export default class InsightFacade implements IInsightFacade {
             this.queryValidator.setFieldsInQuery([]);
             this.queryValidator.setIdInQuery([]);
             this.queryValidator.setTransformationKey([]);
-            this.queryValidator.setAllId(this.dataHandler.getAllId());
+            this.queryValidator.setAllInsightDataset(this.dataHandler.getAllInsightDataset());
             if (typeof query.TRANSFORMATIONS !== "undefined") {
                 if (!(this.queryValidator.validateWhere(query.WHERE)
                     && this.queryValidator.validateTransformations(query.TRANSFORMATIONS)
