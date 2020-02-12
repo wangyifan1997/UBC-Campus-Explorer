@@ -1,5 +1,5 @@
 import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError, ResultTooLargeError} from "./IInsightFacade";
-import DataHandler from "./DataHandler";
+import {Decimal} from "decimal.js";
 
 export default class QueryValidator {
     private idInQuery: string;
@@ -11,55 +11,137 @@ export default class QueryValidator {
     }
 
     public findMatchingSections(q: any): Promise<any[]> {
-        try {
-            let los: any[] = this.findMatchingWhere(q.WHERE);
-            if (typeof q.TRANSFORMATIONS !== "undefined") {
-                los = this.findTransformations(q.TRANSFORMATIONS, los);
-            }
-            if (los.length > 5000) {
-                return Promise.reject(new ResultTooLargeError());
-            } else {
-                return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
-            }
-        } catch (e) {
-            return Promise.reject(e);
+        let los: any[] = this.findMatchingWhere(q.WHERE);
+        if (typeof q.TRANSFORMATIONS !== "undefined") {
+            los = this.findTransformations(q.TRANSFORMATIONS, los);
+        }
+        if (los.length > 5000) {
+            return Promise.reject(new ResultTooLargeError());
+        } else {
+            return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
         }
     }
 
     private findTransformations(q: any, los: any[]): any[] {
-        return [];
+        let temp: any = {};
+        let group: any[] = q.GROUP;
+        let apply: any[] = q.APPLY;
+        for (let section of los) {
+            let marker: string = ""; // marker is the combined string of all the corresponding values in group keys
+            for (let key of group) {
+                marker += section[this.fieldConverter(key.split("_")[1])];
+            }
+            if (!temp[marker]) {
+                temp[marker] = [section];
+            } else {
+                temp[marker].push(section);
+            }
+        }
+        return this.findAPPLY(group, apply, temp);
+    }
+
+    // TODO 拆分，改AVG的实现方式
+    private findAPPLY(group: any[], apply: any[], temp: any[]): any[] {
+        let result: any[] = [];
+        for (let cluster of Object.values(temp)) {
+            let grouped: any = {};
+            for (let key of group) {
+                let field: string = this.fieldConverter(key.split("_")[1]);
+                grouped[field] = cluster[0][field];
+            }
+            for (let applyRule of apply) {
+                let applyKey: string = Object.keys(applyRule)[0];
+                let applyToken: string = Object.keys(applyRule[applyKey])[0];
+                let k: string = this.fieldConverter(applyRule[applyKey][applyToken].split("_")[1]);
+                switch (applyToken) {
+                    case "MAX":
+                        let max: number = Number.NEGATIVE_INFINITY;
+                        for (let section of cluster) {
+                            if (section[k] > max) {
+                                max = section[k];
+                            }
+                        }
+                        grouped[applyKey] = max;
+                        break;
+                    case "MIN":
+                        let min: number = Number.POSITIVE_INFINITY;
+                        for (let section of cluster) {
+                            if (section[k] < max) {
+                                max = section[k];
+                            }
+                        }
+                        grouped[applyKey] = min;
+                        break;
+                    case "AVG":
+                        let total: number = 0;
+                        for (let section of cluster) {
+                            total += section[k];
+                        }
+                        let avg: number = total / cluster.length;
+                        grouped[applyKey] = Number(avg.toFixed(2));
+                        break;
+                    case "COUNT":
+                        grouped[applyKey] = cluster.length;
+                        break;
+                    case "SUM":
+                        let sum: number = 0;
+                        for (let section of cluster) {
+                            result += section[k];
+                        }
+                        grouped[applyKey] = Number(sum.toFixed(2));
+                        break;
+                }
+            }
+            result.push(grouped);
+        }
+        return result;
     }
 
     private findMatchingOPTIONS(q: any, los: any[]): any[] {
-        try {
-            let columns: string[] = q.COLUMNS;
-            let final: any[] = [];
-            let processedSection: { [key: string]: any };
-            for (let section of los) {
-                processedSection = {};
-                for (let column of columns) {
-                    let data: any = section[this.fieldConverter(column.split("_")[1])];
-                    processedSection[column] = data;
+        let columns: string[] = q.COLUMNS;
+        let final: any[] = [];
+        let processedSection: { [key: string]: any };
+        for (let section of los) {
+            processedSection = {};
+            for (let column of columns) {
+                let data: any;
+                if (!column.includes("_")) {
+                    data = section[column];
+                } else {
+                    data = section[this.fieldConverter(column.split("_")[1])];
                 }
-                final.push(processedSection);
+                processedSection[column] = data;
             }
-            let orderKey: string = q.ORDER;
-            final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
-            return final;
-        } catch (e) {
-            throw new InsightError("error in options");
+            final.push(processedSection);
         }
+        let orderKey: any = q.ORDER;
+        if (typeof orderKey === "string") {
+            final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
+        } else if (typeof orderKey === "object") {
+            let keys: string[] = orderKey["keys"];
+            final.sort((a, b) => {
+                for (let key of keys) {
+                    if (a[key] === b[key]) {
+                        continue;
+                    } else {
+                        if (orderKey["dir"] === "UP") {
+                            return a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0;
+                        } else {
+                            return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
+                        }
+                    }
+                }
+                return 0;
+            });
+        }
+        return final;
     }
 
     private findMatchingWhere(q: any): any[] {
-        try {
-            if (Object.keys(q).length === 0) {
-                return this.allDataset[this.idInQuery];
-            } else {
-                return this.findMatchingFilter(q);
-            }
-        } catch (e) {
-            throw new InsightError("error in where");
+        if (Object.keys(q).length === 0) {
+            return this.allDataset[this.idInQuery];
+        } else {
+            return this.findMatchingFilter(q);
         }
     }
 
@@ -83,7 +165,6 @@ export default class QueryValidator {
                     for (let section of this.findMatchingFilter(innerObject)) {
                         allORReturns.add(section);
                     }
-                    // allORReturns.add(new Set(this.findMatchingFilter(innerObject)));
                 }
                 return Array.from(allORReturns.values());
             case "NOT":
@@ -179,7 +260,7 @@ export default class QueryValidator {
         return result;
     }
 
-    private fieldConverter(field: string): string {
+    private fieldConverter(field: string): string {     // TODO 加rooms的convert
         switch (field) {
             case "dept":
                 return "Subject";
