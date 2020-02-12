@@ -250,16 +250,17 @@ export default class DataHandler {
     }
 
     public getAllId(): string[] {
+        // this.readDataset();
         return this.allId;
     }
 
     public getAllDataset(): any {
-        this.readDataset();
+        // this.readDataset();
         return this.allDataset;
     }
 
     public getAllInsightDataset(): InsightDataset[] {
-        this.readDataset();
+        // this.readDataset();
         return this.allInsightDataset;
     }
 }

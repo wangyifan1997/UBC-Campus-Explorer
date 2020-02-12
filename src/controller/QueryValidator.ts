@@ -17,7 +17,6 @@ export default class QueryValidator {
     constructor() {
         this.idInQuery = [];
         this.fieldsInQuery = [];
-        // this.allId = [];
         this.transformationKey = [];
         this.allInsightDataset = [];
     }

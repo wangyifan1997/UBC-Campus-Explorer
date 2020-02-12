@@ -13,6 +13,9 @@ export default class QueryValidator {
     public findMatchingSections(q: any): Promise<any[]> {
         try {
             let los: any[] = this.findMatchingWhere(q.WHERE);
+            if (typeof q.TRANSFORMATIONS !== "undefined") {
+                los = this.findTransformations(q.TRANSFORMATIONS, los);
+            }
             if (los.length > 5000) {
                 return Promise.reject(new ResultTooLargeError());
             } else {
@@ -21,6 +24,10 @@ export default class QueryValidator {
         } catch (e) {
             return Promise.reject(e);
         }
+    }
+
+    private findTransformations(q: any, los: any[]): any[] {
+        return [];
     }
 
     private findMatchingOPTIONS(q: any, los: any[]): any[] {
@@ -152,7 +159,7 @@ export default class QueryValidator {
             }
         } else if (str.slice(0, 1) === "*") {
             for (let section of allSections) {
-                if (section[sfield].endsWith(str.slice(1, ))) {
+                if (section[sfield].endsWith(str.slice(1,))) {
                     result.push(section);
                 }
             }
