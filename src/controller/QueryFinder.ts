@@ -1,5 +1,6 @@
 import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError, ResultTooLargeError} from "./IInsightFacade";
 import {Decimal} from "decimal.js";
+import Log from "../Util";
 
 export default class QueryValidator {
     private idInQuery: string;
@@ -76,11 +77,17 @@ export default class QueryValidator {
                         grouped[applyKey] = min;
                         break;
                     case "AVG":
-                        let total: number = 0;
+                        // let total: number = 0;
+                        // for (let section of cluster) {
+                        //     total += section[k];
+                        // }
+                        // let avg: number = total / cluster.length;
+                        // grouped[applyKey] = Number(avg.toFixed(2));
+                        let total: Decimal = new Decimal(0);
                         for (let section of cluster) {
-                            total += section[k];
+                            total = total.plus(new Decimal(section[k]));
                         }
-                        let avg: number = total / cluster.length;
+                        let avg = total.toNumber() / cluster.length;
                         grouped[applyKey] = Number(avg.toFixed(2));
                         break;
                     case "COUNT":
@@ -129,9 +136,9 @@ export default class QueryValidator {
                         continue;
                     } else {
                         if (orderKey["dir"] === "UP") {
-                            return a[key] < b[key] ? -1 : a[key] > b[key] ? 1 : 0;
+                            return a[key] < b[key] ? -1 : 1;
                         } else {
-                            return a[key] < b[key] ? 1 : a[key] > b[key] ? -1 : 0;
+                            return a[key] < b[key] ? 1 : -1;
                         }
                     }
                 }

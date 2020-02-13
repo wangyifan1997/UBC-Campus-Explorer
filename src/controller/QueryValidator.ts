@@ -46,8 +46,9 @@ export default class QueryValidator {
         return true;
     }
 
+    // TODO there could be no applyRule inside apply!
     private validateAPPLY(q: any): boolean {
-        if (!Array.isArray(q) || q.length < 1) {
+        if (!Array.isArray(q)) {
             return false; // q should be an array, and should have at least one element
         }
         for (let applyrule of q) {
