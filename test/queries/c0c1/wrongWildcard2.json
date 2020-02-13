@@ -1,0 +1,65 @@
+{
+    "title": "A query with wrong wildcard",
+    "query": {
+        "WHERE": {
+            "OR": [
+                {
+                    "AND": [
+                        {
+                            "GT": {
+                                "courses_avg": 90
+                            }
+                        },
+                        {
+                            "LT": {
+                                "courses_fail": 10
+                            }
+                        },
+                        {
+                            "EQ": {
+                                "courses_year": 2010
+                            }
+                        },
+                        {
+                            "GT": {
+                                "courses_pass": 100
+                            }
+                        },
+                        {
+                            "IS": {
+                                "courses_dept": "adhe"
+                            }
+                        },
+                        {
+                            "NOT": {
+                                "IS": {
+                                    "courses_instructor": "John Doe"
+                                }
+                            }
+                        },
+                        {
+                            "IS": {
+                                "courses_id": "****3**"
+                            }
+                        }
+                    ]
+                },
+                {
+                    "EQ": {
+                        "courses_avg": 95
+                    }
+                }
+            ]
+        },
+        "OPTIONS": {
+            "COLUMNS": [
+                "courses_dept",
+                "courses_id",
+                "courses_avg"
+            ],
+            "ORDER": "courses_avg"
+        }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

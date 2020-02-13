@@ -1,0 +1,19 @@
+{
+    "title": "invalid key in GT, with a skey in mcomparison",
+    "query": {
+      "WHERE": {
+        "GT": {
+          "courses_instructor": 97
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_id",
+          "courses_avg"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

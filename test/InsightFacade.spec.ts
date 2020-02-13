@@ -4,6 +4,7 @@ import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from ".
 import InsightFacade from "../src/controller/InsightFacade";
 import Log from "../src/Util";
 import TestUtil from "./TestUtil";
+import DataHandler from "../src/controller/DataHandler";
 
 // This should match the schema given to TestUtil.validate(..) in TestUtil.readTestQueries(..)
 // except 'filename' which is injected when the file is read.
@@ -16,36 +17,89 @@ export interface ITestQuery {
 }
 
 describe("Test helper methods", () => {
-    let insightFacade: InsightFacade;
-    insightFacade = new InsightFacade();
+    let dataHandler: DataHandler;
+    dataHandler = new DataHandler();
 
-    it("should be able to parse a course, regardless of the result", () => {
+    it("should be able to filter invalid section", () => {
         const course1: string[] = ["{\"result\":[{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":" +
-            "\"comp eng design\"" +
-            ",\"Section\":\"921\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28" +
-            ",\"tier_sixty_four\":2,\"id\":1418,\"tier_sixty_eight\":5,\"tier_zero\":0,\"tier_seventy_six" +
-            "\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"agharebparast, farshid\",\"Audit\":0," +
-            "\"tier_g_fifty" +
-            "\":2,\"tier_forty\":1,\"Withdrew\":1,\"Year\":\"2013\",\"tier_twenty\":1," +
-            "\"Stddev\":13.38,\"Enrolled\":90,\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7," +
-            "\"tier_ten\":0," +
-            "\"High\":99,\"Course\":\"160\",\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc" +
-            "\"," +
-            "\"Subject" +
-            "\":\"apsc\"},{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":\"comp eng design\"," +
-            "\"Section\":\"overall\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28,\"tier_sixty_four" +
-            "\":2," +
-            "\"id\":1419,\"tier_sixty_eight\":5,\"tier_zero\":0," +
-            "\"tier_seventy_six\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"\",\"Audit\":0,\"tier_g_fifty" +
-            "\":2,\"tier_forty\":1,\"Withdrew\":2,\"Year\":\"2013\",\"tier_twenty\":1,\"Stddev\":13.38,\"Enrolled" +
-            "\":91," +
-            "\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7,\"tier_ten\":0,\"High\":99,\"Course\":\"160\"," +
-            "\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc\",\"Subject\":\"apsc\"}]}"];
-        return insightFacade.parseCourseJSON(course1).then((result: string[]) => {
-            // eslint-disable-next-line no-console
-            console.log(result);
+        "\"comp eng design\"" +
+        ",\"Section\":\"921\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28" +
+        ",\"tier_sixty_four\":2,\"id\":1418,\"tier_sixty_eight\":5,\"tier_zero\":0,\"tier_seventy_six" +
+        "\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"agharebparast, farshid\",\"Audit\":0," +
+        "\"tier_g_fifty" +
+        "\":2,\"tier_forty\":1,\"Withdrew\":1,\"Year\":\"2013\",\"tier_twenty\":1," +
+        "\"Stddev\":13.38,\"Enrolled\":90,\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7," +
+        "\"tier_ten\":0," +
+        "\"High\":99,\"Course\":\"160\",\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc" +
+        "\"," +
+        "\"Subject" +
+        "\":\"apsc\"},{\"tier_eighty_five\":11,\"tier_ninety\":28,\"Title\":\"comp eng design\"," +
+        "\"Section\":\"overall\",\"Detail\":\"\",\"tier_seventy_two\":6,\"Other\":0,\"Low\":28,\"tier_sixty_four" +
+        "\":2," +
+        "\"id\":1419,\"tier_sixty_eight\":5,\"tier_zero\":0," +
+        "\"tier_seventy_six\":8,\"tier_thirty\":0,\"tier_fifty\":2,\"Professor\":\"\",\"Audit\":0,\"tier_g_fifty" +
+        "\":2,\"tier_forty\":1,\"Withdrew\":2," +
+        // "\"Year\":\"2013\",\"tier_twenty\":1,\"Stddev\":13.38,\"Enrolled" +
+        // "\":91," +
+        "\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7,\"tier_ten\":0,\"High\":99,\"Course\":\"160\"," +
+        "\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc\",\"Subject\":\"apsc\"}]}"];
+        return dataHandler.parseCourseJSON(course1).then((result: string[]) => {
+            return dataHandler.getAllSections(result, "courses");
         }).catch((err: any) => {
             expect.fail("should not have rejected");
+        }).then((allSections: any[]) => {
+            expect(allSections.length).equal(1);
+        }).catch((err: any) => {
+            expect.fail("should not have rejected");
+        });
+    });
+});
+
+describe("multiple InsightFacade add/remove test", function () {
+    const datasetsToLoad: { [id: string]: string } = {
+        courses: "./test/data/courses.zip",
+    };
+    let datasets: { [id: string]: string } = {};
+    let insightFacade1: InsightFacade;
+    let insightFacade2: InsightFacade;
+    const cacheDir = __dirname + "/../data";
+
+    before(function () {
+        // This section runs once and loads all datasets specified in the datasetsToLoad object
+        // into the datasets object
+        Log.test(`Before all`);
+        for (const id of Object.keys(datasetsToLoad)) {
+            datasets[id] = fs.readFileSync(datasetsToLoad[id]).toString("base64");
+        }
+    });
+
+    beforeEach(function () {
+        // This section resets the data directory (removing any cached data) and resets the InsightFacade instance
+        // This runs before each test, which should make each test independent from the previous one
+        Log.test(`BeforeTest: ${this.currentTest.title}`);
+        try {
+            fs.removeSync(cacheDir);
+            fs.mkdirSync(cacheDir);
+            insightFacade1 = new InsightFacade();
+            insightFacade2 = new InsightFacade();
+        } catch (err) {
+            Log.error(err);
+        }
+    });
+
+    it("2 should reject when 1 has added a dataset with same id", function () {
+        const expected: string[] = ["courses"];
+        const dataset: string = datasets["courses"];
+        return insightFacade1.addDataset("courses", dataset, InsightDatasetKind.Courses).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail();
+        }).then(() => {
+            return insightFacade2.addDataset("courses", dataset, InsightDatasetKind.Courses);
+        }).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
         });
     });
 });
@@ -62,14 +116,14 @@ describe("InsightFacade Add/Remove Dataset", function () {
         actuallyAWord: "./test/data/actuallyAWord.zip",
         emptyZipWithNotCoursesFolder: "./test/data/emptyZipWithNotCoursesFolder.zip",
         zipWithCoursesFolderButInvalidFiles: "./test/data/zipWithCoursesFolderButInvalidFiles.zip",
-        zipWithZeroSection: "./test/data/zipWithZeroSection.zip",
         zipWithOneSection: "./test/data/zipWithOneSection.zip",
-        zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip"
+        zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip",
+        zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip"
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
     const cacheDir = __dirname + "/../data";
-
+    // randomly changing something
     before(function () {
         // This section runs once and loads all datasets specified in the datasetsToLoad object
         // into the datasets object
@@ -93,6 +147,12 @@ describe("InsightFacade Add/Remove Dataset", function () {
     });
 
     after(function () {
+        try {
+            fs.removeSync(cacheDir);
+            fs.mkdirSync(cacheDir);
+        } catch (err) {
+            Log.error(err);
+        }
         Log.test(`After: ${this.test.parent.title}`);
     });
 
@@ -109,6 +169,33 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("should not add empty content", () => {
+        const id: string = "courses";
+        return insightFacade.addDataset(id, "", InsightDatasetKind.Courses).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add null content", () => {
+        const id: string = "courses";
+        return insightFacade.addDataset(id, null, InsightDatasetKind.Courses).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add undefined content", () => {
+        const id: string = "courses";
+        return insightFacade.addDataset(id, undefined, InsightDatasetKind.Courses).then(() => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
     it("Should list a dataset", () => {
         const id: string = "courses";
         const expected: InsightDataset[] = [{
@@ -117,7 +204,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
             numRows: 64612
         }];
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
-            expect(result).to.deep.equal(expected);
+            expect(result).to.deep.equal(["courses"]);
         }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         }).then(() => {
@@ -131,13 +218,23 @@ describe("InsightFacade Add/Remove Dataset", function () {
 
     // This is a unit test. You should create more like this!
     it("Should add a valid dataset", function () {
-        const id: string = "courses";
+        const id: string = "test1";
         const expected: string[] = [id];
-        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
-            expect(result).to.deep.equal(expected);
-        }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-            console.log(err);
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a mixed dataset", function () {
+        const id: string = "zipWithMixedFiles";
+        const expected: string[] = [id];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         });
     });
@@ -196,15 +293,6 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
-    it("Should not add a dataset with zero sections", function () {
-        const id: string = "zipWithZeroSection";
-        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
-            expect.fail();
-        }).catch((err: any) => {
-            expect(err).to.be.instanceOf(InsightError);
-        });
-    });
-
     it("Should not add a dataset with zero valid section", function () {
         const id: string = "zipWithZeroValidSection";
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
@@ -225,17 +313,17 @@ describe("InsightFacade Add/Remove Dataset", function () {
     });
 
     it("Should add two valid dataset with different ids", function () {
-        const id1: string = "test1";
-        const id2: string = "test2";
+        const id1: string = "courses";
+        const id2: string = "zipWithOneSection";
         const expected1: string[] = [id1];
         const expected2: string[] = [id1, id2];
-        return insightFacade.addDataset(id1, datasets["courses"], InsightDatasetKind.Courses).then(
+        return insightFacade.addDataset(id1, datasets[id1], InsightDatasetKind.Courses).then(
             (result: string[]) => {
-            expect(result).to.deep.equal(expected1);
-        }).catch((err: any) => {
+                expect(result).to.deep.equal(expected1);
+            }).catch((err: any) => {
             expect.fail(err, expected1, "Should not have rejected");
         }).then(() => {
-            return insightFacade.addDataset(id2, datasets["courses"], InsightDatasetKind.Courses);
+            return insightFacade.addDataset(id2, datasets[id2], InsightDatasetKind.Courses);
         }).then((result: string[]) => {
             expect(result).to.deep.equal(expected2);
         }).catch((err: any) => {
@@ -244,19 +332,18 @@ describe("InsightFacade Add/Remove Dataset", function () {
     });
 
     it("should not add dataset with duplicate ids", function () {
-        const id: string = "courses";
+        const id: string = "test4";
         const expected: string[] = [id];
-        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
-            expect(result).to.deep.equal(expected);
-        }).catch((err: any) => {
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         }).then(() => {
-            return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses);
+            return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses);
         }).then((result: string[]) => {
             expect.fail();
         }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-            console.log(err);
             expect(err).to.be.instanceOf(InsightError);
         });
     });
@@ -265,8 +352,18 @@ describe("InsightFacade Add/Remove Dataset", function () {
         const id: string = "test_invalid";
         return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
             (result: string[]) => {
-            expect.fail();
-        }).catch((err: any) => {
+                expect.fail();
+            }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add null id", function () {
+        const id: string = null;
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect.fail();
+            }).catch((err: any) => {
             expect(err).to.be.instanceOf(InsightError);
         });
     });
@@ -277,9 +374,17 @@ describe("InsightFacade Add/Remove Dataset", function () {
             (result: string[]) => {
                 expect.fail();
             }).catch((err: any) => {
-            // eslint-disable-next-line no-console
-                console.log(err);
-                expect(err).to.be.instanceOf(InsightError);
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("should not add dataset with invalid id with empty string", function () {
+        const id: string = "";
+        return insightFacade.addDataset(id, datasets["courses"], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect.fail();
+            }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
         });
     });
 
@@ -299,7 +404,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
-    it("should reject when removing a dataset that is not existing", () => {
+    it("should reject when removing a dataset that is not existed", () => {
         const id: string = "courses";
         const expected: string[] = [id];
         const nonExistedId: string = "noSuchId";
@@ -322,6 +427,15 @@ describe("InsightFacade Add/Remove Dataset", function () {
             expect.fail();
         }).catch((err: any) => {
             expect(err).to.be.instanceOf(NotFoundError);
+        });
+    });
+
+    it("remove null", () => {
+        const nonExistedId: string = null;
+        return insightFacade.removeDataset(nonExistedId).then((result: string) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
         });
     });
 
@@ -368,7 +482,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
  * You can still make tests the normal way, this is just a convenient tool for a majority of queries.
  */
 describe("InsightFacade PerformQuery", () => {
-    const datasetsToQuery: { [id: string]: {path: string, kind: InsightDatasetKind} } = {
+    const datasetsToQuery: { [id: string]: { path: string, kind: InsightDatasetKind } } = {
         courses: {path: "./test/data/courses.zip", kind: InsightDatasetKind.Courses},
     };
     let insightFacade: InsightFacade;
@@ -395,13 +509,14 @@ describe("InsightFacade PerformQuery", () => {
             const data = fs.readFileSync(ds.path).toString("base64");
             loadDatasetPromises.push(insightFacade.addDataset(id, data, ds.kind));
         }
-        return Promise.all(loadDatasetPromises).catch((err) => {
-            /* *IMPORTANT NOTE: This catch is to let this run even without the implemented addDataset,
-             * for the purposes of seeing all your tests run.
-             * TODO For C1, remove this catch block (but keep the Promise.all)
-             */
-            return Promise.resolve("HACK TO LET QUERIES RUN");
-        });
+        return Promise.all(loadDatasetPromises);
+        //     .catch((err) => {
+        //     /* *IMPORTANT NOTE: This catch is to let this run even without the implemented addDataset,
+        //      * for the purposes of seeing all your tests run.
+        //      * TODO For C1, remove this catch block (but keep the Promise.all)
+        //      */
+        //     return Promise.resolve("HACK TO LET QUERIES RUN");
+        // });
     });
 
     beforeEach(function () {

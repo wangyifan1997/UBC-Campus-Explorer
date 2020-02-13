@@ -1,0 +1,29 @@
+{
+    "title": "Referenced dataset \"avg\" not added yet",
+    "query": {
+        "WHERE": {
+            "NOT": {
+                "OR": [
+                    {
+                        "LT": {
+                            "avg_avg": 95
+                        }
+                    },
+                    {
+                        "IS": {
+                            "avg_avg": "DATA"
+                        }
+                    }
+                ]
+            }
+        },
+        "OPTIONS": {
+            "COLUMNS": [
+                "courses_dept"
+            ],
+            "ORDER": "courses_dept"
+        }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

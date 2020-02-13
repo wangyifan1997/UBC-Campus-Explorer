@@ -1,0 +1,122 @@
+{
+    "title": "complex_asteristic",
+    "query": {
+        "WHERE": {
+            "AND": [
+                {
+                    "LT": {
+                        "courses_avg": 50
+                    }
+                },
+                {
+                    "NOT": {
+                        "GT": {
+                            "courses_pass": 95
+                        }
+                    }
+                },
+                {
+                    "IS": {
+                        "courses_uuid": "*5*"
+                    }
+                }
+            ]
+        },
+        "OPTIONS": {
+            "COLUMNS": [
+                "courses_avg",
+                "courses_pass",
+                "courses_title",
+                "courses_uuid"
+            ],
+            "ORDER": "courses_avg"
+        }
+    },
+    "isQueryValid": true,
+    "result": [
+        {
+            "courses_avg": 0,
+            "courses_pass": 0,
+            "courses_title": "in land food com",
+            "courses_uuid": "56403"
+        },
+        {
+            "courses_avg": 0,
+            "courses_pass": 0,
+            "courses_title": "in land food com",
+            "courses_uuid": "56402"
+        },
+        {
+            "courses_avg": 0,
+            "courses_pass": 0,
+            "courses_title": "forest ecology",
+            "courses_uuid": "89536"
+        },
+        {
+            "courses_avg": 1,
+            "courses_pass": 0,
+            "courses_title": "prpty,ident&uses",
+            "courses_uuid": "49835"
+        },
+        {
+            "courses_avg": 33,
+            "courses_pass": 1,
+            "courses_title": "engr econ anlys",
+            "courses_uuid": "53284"
+        },
+        {
+            "courses_avg": 33.2,
+            "courses_pass": 5,
+            "courses_title": "log & crit think",
+            "courses_uuid": "51675"
+        },
+        {
+            "courses_avg": 34,
+            "courses_pass": 1,
+            "courses_title": "hist 1500 - 20 c",
+            "courses_uuid": "14375"
+        },
+        {
+            "courses_avg": 39.03,
+            "courses_pass": 39,
+            "courses_title": "language & curr",
+            "courses_uuid": "50478"
+        },
+        {
+            "courses_avg": 39.03,
+            "courses_pass": 39,
+            "courses_title": "language & curr",
+            "courses_uuid": "50477"
+        },
+        {
+            "courses_avg": 46.59,
+            "courses_pass": 11,
+            "courses_title": "intr biometrics",
+            "courses_uuid": "51393"
+        },
+        {
+            "courses_avg": 47.29,
+            "courses_pass": 9,
+            "courses_title": "intro acad writ",
+            "courses_uuid": "92651"
+        },
+        {
+            "courses_avg": 47.82,
+            "courses_pass": 8,
+            "courses_title": "intro acad writ",
+            "courses_uuid": "92655"
+        },
+        {
+            "courses_avg": 49.14,
+            "courses_pass": 5,
+            "courses_title": "intr biometrics",
+            "courses_uuid": "89544"
+        },
+        {
+            "courses_avg": 49.25,
+            "courses_pass": 7,
+            "courses_title": "wtr treat&wst mg",
+            "courses_uuid": "79563"
+        }
+    ]
+}

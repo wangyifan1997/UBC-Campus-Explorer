@@ -1,10 +1,10 @@
 import Log from "../Util";
-import {IInsightFacade, InsightDataset, InsightDatasetKind} from "./IInsightFacade";
+import {IInsightFacade, InsightDataset, InsightDatasetKind, ResultTooLargeError} from "./IInsightFacade";
 import {InsightError, NotFoundError} from "./IInsightFacade";
 import * as JSZip from "jszip";
-import {expect} from "chai";
-import {JSZipObject} from "jszip";
-import {promises} from "dns";
+import DataHandler from "./DataHandler";
+import QueryValidator from "./QueryValidator";
+import QueryFinder from "./QueryFinder";
 
 /**
  * This is the main programmatic entry point for the project.
@@ -13,138 +13,95 @@ import {promises} from "dns";
  */
 
 // dev branch
-// muhan branch
+// muhan branch change
 export default class InsightFacade implements IInsightFacade {
-
-    public allId: string[];
+    private dataHandler: DataHandler;
+    private queryValidator: QueryValidator;
+    private queryfinder: QueryFinder;
 
     constructor() {
-        this.allId = [];
+        this.dataHandler = new DataHandler();
+        this.dataHandler.readDataset();
+        this.queryValidator = new QueryValidator();
+        this.queryfinder = new QueryFinder();
         Log.trace("InsightFacadeImpl::init()");
     }
 
-    private isIdOk(id: string, content: string): Promise<any> {
-        return new Promise((resolve, reject) => {
-            if (this.isIdAdded(id) || this.isIdIllegal(id)) {
-                reject(InsightError);
-            }
-            resolve();
-        });
-    }
-
-    private checkCoursesFolder(zipData: JSZip): Promise<any> {
-        let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
-        if (coursesFolder.length === 0) {
-            return Promise.reject(InsightError);
-        }
-        return Promise.resolve(zipData);
-    }
-
-    public parseCourseJSON(contents: string[]): Promise<string[]> {
-        let temp: any[] = [];
-        try {
-            for (let course of contents) {
-                temp.push(JSON.parse(course));
-            }
-        } catch (e) {
-            return Promise.reject(e);
-        }
-        return Promise.resolve(temp);
-    }
-
-    public getAllSections(allCourses: any[]): Promise<any> {
-        let allSections: any[] = [];
-        for (let course of allCourses) {
-            let sections: any[] = course.result;
-            for (let section of sections) {
-                if (this.isValidSection(section)) {
-                    section.id = section.id.toString();
-                    if (section.Year.toLowerCase() === "overall") {
-                        section.Year = 1900;
-                        allSections.push(section);
-                    } else {
-                        section.Year = Number(section.Year);
-                        if (!isNaN(section.Year)) {
-                            allSections.push(section);
-                        }
-                    }
-                }
-            }
-        }
-        if (allSections.length === 0) {
-            return Promise.reject(new InsightError());
-        } else {
-            return Promise.resolve(allSections);
-        }
-    }
-
-    public isValidSection(section: any): boolean {
-        return (typeof section.Subject === "string"
-            && typeof section.Course === "string"
-            && typeof section.Avg === "number"
-            && typeof section.Professor === "string"
-            && typeof section.Title === "string"
-            && typeof section.Pass === "number"
-            && typeof section.Fail === "number"
-            && typeof section.Audit === "number"
-            && typeof section.id === "number"
-            && typeof section.Year === "string");
-    }
-
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
-        return this.isIdOk(id, content).then(() => {
-            let zip: JSZip = new JSZip();
-            return zip.loadAsync(content, {base64: true});
+        return this.dataHandler.isIdOkToAdd(id).then(() => {
+            return this.dataHandler.myLoadAsync(content);
         }).then((zipData: JSZip) => {
-            return this.checkCoursesFolder(zipData);
+            return this.dataHandler.checkCoursesFolder(zipData);
         }).then((zipData: JSZip) => {
-            // chaining all promises
-            let allFiles: string[] = [];
-            zipData.folder("courses").forEach((relativePath, file) => {
-                allFiles.push(file.name);
-            });
-            let allPromises: any[] = allFiles.map((fileDir: string) => {
-                return zipData.file(fileDir).async("text");
-            });
-            return Promise.all(allPromises);
+            return this.dataHandler.loadAllFilesToAllPromises(zipData);
         }).then((result: string[]) => {
-            return this.parseCourseJSON(result);
+            return this.dataHandler.parseCourseJSON(result);
         }).then((allCourses: string[]) => {
-            return this.getAllSections(allCourses);
+            return this.dataHandler.getAllSections(allCourses, id);
         }).then((allSections: any[]) => {
-            this.allId.push(id);
-            return Promise.resolve(this.allId);
+            this.dataHandler.addId(id);
+            return this.dataHandler.myWriteFile(id, allSections);
+        }).then((dataToBeAdd: any[]) => {
+            this.dataHandler.addToDataset(id, kind, dataToBeAdd);
+            return Promise.resolve(this.dataHandler.getAllId());
         }).catch((err: any) => {
             return Promise.reject(new InsightError());
         });
     }
 
     public removeDataset(id: string): Promise<string> {
-        return Promise.reject("Not implemented.");
+        return this.dataHandler.isIdOkToDelete(id).then(() => {
+            this.dataHandler.myDeleteDataset(id);
+            return Promise.resolve(id);
+        }).catch((err: any) => {
+            if (!(err instanceof InsightError) && !(err instanceof NotFoundError)) {
+                return Promise.reject(new InsightError());
+            } else {
+                return Promise.reject(err);
+            }
+        });
     }
 
     public performQuery(query: any): Promise<any[]> {
-        return Promise.reject("Not implemented.");
+        try {
+            if (query === null || typeof query.WHERE === "undefined"
+                || typeof query.OPTIONS === "undefined") {
+                return Promise.reject(new InsightError());
+            }
+            for (let key of Object.keys(query)) {
+                if (key !== "OPTIONS" && key !== "WHERE" && key !== "TRANSFORMATIONS") {
+                    return Promise.reject(new InsightError());
+                }
+            }
+            this.queryValidator.setFieldsInQuery([]);
+            this.queryValidator.setIdInQuery([]);
+            this.queryValidator.setTransformationKey([]);
+            this.queryValidator.setAllInsightDataset(this.dataHandler.getAllInsightDataset());
+            if (typeof query.TRANSFORMATIONS !== "undefined") {
+                if (!(this.queryValidator.validateWhere(query.WHERE)
+                    && this.queryValidator.validateTransformations(query.TRANSFORMATIONS)
+                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                    return Promise.reject(new InsightError());
+                }
+            } else {
+                if (!(this.queryValidator.validateWhere(query.WHERE)
+                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                    return Promise.reject(new InsightError());
+                }
+            }
+            this.queryfinder.setAllDataset(this.dataHandler.getAllDataset());
+            this.queryfinder.setidInQuery(this.queryValidator.getIdInQuery()[0]);
+            return this.queryfinder.findMatchingSections(query);
+        } catch (err) {
+            if (!(err instanceof InsightError) && !(err instanceof ResultTooLargeError)) {
+                return Promise.reject(new InsightError());
+            } else {
+                return Promise.reject(err);
+            }
+        }
     }
 
     public listDatasets(): Promise<InsightDataset[]> {
-        return Promise.reject("Not implemented.");
-    }
-
-    private isIdIllegal(id: string): boolean {
-        let count: number = 0;
-        for (let letter of id) {
-            if (letter === " ") {
-                count++;
-            }
-            if (letter === "_") {
-                return true;
-            }
-        }
-        return count === id.length;
-    }
-
-    private isIdAdded(id: string): boolean {
-        return this.allId.includes(id);
+        return Promise.resolve(this.dataHandler.getAllInsightDataset());
     }
 }
