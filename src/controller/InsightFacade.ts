@@ -73,7 +73,7 @@ export default class InsightFacade implements IInsightFacade {
                     return Promise.reject(new InsightError());
                 }
             }
-            this.queryValidator.setFieldsInQuery([]);
+            this.queryValidator.setKeysInQuery([]);
             this.queryValidator.setIdInQuery([]);
             this.queryValidator.setTransformationKey([]);
             this.queryValidator.setAllInsightDataset(this.dataHandler.getAllInsightDataset());

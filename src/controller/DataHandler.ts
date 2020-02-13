@@ -42,11 +42,7 @@ export default class DataHandler {
     }
 
     public isIdOkToAdd(id: string): Promise<any> {
-        try {
-            this.readDataset();
-        } catch (e) {
-            return Promise.reject(new InsightError());
-        }
+        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -57,11 +53,7 @@ export default class DataHandler {
     }
 
     public isIdOkToDelete(id: string): Promise<any> {
-        try {
-            this.readDataset();
-        } catch (e) {
-            return Promise.reject(new InsightError());
-        }
+        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -124,7 +116,6 @@ export default class DataHandler {
                     }
                     section.Year = Number(section.Year);
                     if (!isNaN(section.Year)) {
-                        // allSections.push(section);
                         section = this.convertSection(section, id);
                         allSections.push(section);
                     }
@@ -293,17 +284,14 @@ export default class DataHandler {
     }
 
     public getAllId(): string[] {
-        // this.readDataset();
         return this.allId;
     }
 
     public getAllDataset(): any {
-        // this.readDataset();
         return this.allDataset;
     }
 
     public getAllInsightDataset(): InsightDataset[] {
-        // this.readDataset();
         return this.allInsightDataset;
     }
 }

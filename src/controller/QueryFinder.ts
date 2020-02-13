@@ -1,6 +1,5 @@
 import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError, ResultTooLargeError} from "./IInsightFacade";
 import {Decimal} from "decimal.js";
-import Log from "../Util";
 
 export default class QueryValidator {
     private idInQuery: string;
@@ -30,7 +29,6 @@ export default class QueryValidator {
         for (let section of los) {
             let marker: string = ""; // marker is the combined string of all the corresponding values in group keys
             for (let key of group) {
-                // marker += section[this.fieldConverter(key.split("_")[1])];
                 marker += section[key];
             }
             if (!temp[marker]) {
@@ -42,53 +40,38 @@ export default class QueryValidator {
         return this.findAPPLY(group, apply, temp);
     }
 
-    // TODO 拆分，改AVG的实现方式
     private findAPPLY(group: any[], apply: any[], temp: any[]): any[] {
         let result: any[] = [];
         for (let cluster of Object.values(temp)) {
             let grouped: any = {};
             for (let key of group) {
-                // let field: string = this.fieldConverter(key.split("_")[1]);
-                // grouped[field] = cluster[0][field];
                 grouped[key] = cluster[0][key];
             }
             for (let applyRule of apply) {
                 let applyKey: string = Object.keys(applyRule)[0];
                 let applyToken: string = Object.keys(applyRule[applyKey])[0];
-                // let k: string = this.fieldConverter(applyRule[applyKey][applyToken].split("_")[1]);
                 let k: string = applyRule[applyKey][applyToken];
                 switch (applyToken) {
                     case "MAX":
-                        let max: number = Number.NEGATIVE_INFINITY;
+                        let numMax: number[] = [];
                         for (let section of cluster) {
-                            if (section[k] > max) {
-                                max = section[k];
-                            }
+                            numMax.push(section[k]);
                         }
-                        grouped[applyKey] = max;
+                        grouped[applyKey] = Math.max.apply(numMax);
                         break;
                     case "MIN":
-                        let min: number = Number.POSITIVE_INFINITY;
+                        let numMin: number[] = [];
                         for (let section of cluster) {
-                            if (section[k] < max) {
-                                max = section[k];
-                            }
+                            numMin.push(section[k]);
                         }
-                        grouped[applyKey] = min;
+                        grouped[applyKey] = Math.min.apply(numMin);
                         break;
                     case "AVG":
-                        // let total: number = 0;
-                        // for (let section of cluster) {
-                        //     total += section[k];
-                        // }
-                        // let avg: number = total / cluster.length;
-                        // grouped[applyKey] = Number(avg.toFixed(2));
                         let total: Decimal = new Decimal(0);
                         for (let section of cluster) {
                             total = total.plus(new Decimal(section[k]));
                         }
-                        let avg = total.toNumber() / cluster.length;
-                        grouped[applyKey] = Number(avg.toFixed(2));
+                        grouped[applyKey] = Number((total.toNumber() / cluster.length).toFixed(2));
                         break;
                     case "COUNT":
                         grouped[applyKey] = cluster.length;
@@ -114,14 +97,7 @@ export default class QueryValidator {
         for (let section of los) {
             processedSection = {};
             for (let column of columns) {
-                let data: any;
-                if (!column.includes("_")) {
-                    data = section[column];
-                } else {
-                    // data = section[this.fieldConverter(column.split("_")[1])];
-                    data = section[column];
-                }
-                processedSection[column] = data;
+                processedSection[column] = section[column];
             }
             final.push(processedSection);
         }
@@ -205,27 +181,25 @@ export default class QueryValidator {
         let result: any[] = [];
         let mkey: string = Object.keys(value)[0];
         let num: any = Object.values(value)[0];
-        // let mfield: string = mkey.split("_")[1];
         let allSections: any[] = this.allDataset[this.idInQuery];
-        // mfield = this.fieldConverter(mfield);
         switch (type) {
             case "GT":
                 for (let section of allSections) {
-                    if (section[mkey] > num) { // changed
+                    if (section[mkey] > num) {
                         result.push(section);
                     }
                 }
                 return result;
             case "LT":
                 for (let section of allSections) {
-                    if (section[mkey] < num) { // changed
+                    if (section[mkey] < num) {
                         result.push(section);
                     }
                 }
                 return result;
             case "EQ":
                 for (let section of allSections) {
-                    if (section[mkey] === num) { // changed
+                    if (section[mkey] === num) {
                         result.push(section);
                     }
                 }
@@ -240,63 +214,34 @@ export default class QueryValidator {
         let result: any[] = [];
         let skey: string = Object.keys(value)[0];
         let str: any = Object.values(value)[0];
-        // let sfield: string = skey.split("_")[1];
         let allSections: any[] = this.allDataset[this.idInQuery];
-        // sfield = this.fieldConverter(sfield);
         if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
             for (let section of allSections) {
-                if (section[skey].includes(str.slice(1, -1))) { // changed
+                if (section[skey].includes(str.slice(1, -1))) {
                     result.push(section);
                 }
             }
         } else if (str.slice(0, 1) === "*") {
             for (let section of allSections) {
-                if (section[skey].endsWith(str.slice(1, ))) { // changed
+                if (section[skey].endsWith(str.slice(1, ))) {
                     result.push(section);
                 }
             }
         } else if (str.slice(-1) === "*") {
             for (let section of allSections) {
-                if (section[skey].startsWith(str.slice(0, -1))) { // changed
+                if (section[skey].startsWith(str.slice(0, -1))) {
                     result.push(section);
                 }
             }
         } else {
             for (let section of allSections) {
-                if (section[skey] === str) { // changed
+                if (section[skey] === str) {
                     result.push(section);
                 }
             }
         }
         return result;
     }
-
-    // private fieldConverter(field: string): string {     // TODO 加rooms的convert
-    //     switch (field) {
-    //         case "dept":
-    //             return "Subject";
-    //         case "id":
-    //             return "Course";
-    //         case "avg":
-    //             return "Avg";
-    //         case "instructor":
-    //             return "Professor";
-    //         case "title":
-    //             return "Title";
-    //         case "pass":
-    //             return "Pass";
-    //         case "fail":
-    //             return "Fail";
-    //         case "audit":
-    //             return "Audit";
-    //         case "uuid":
-    //             return "id";
-    //         case "year":
-    //             return "Year";
-    //         default:
-    //             return undefined;
-    //     }
-    // }
 
     public setAllDataset(data: any) {
         this.allDataset = data;

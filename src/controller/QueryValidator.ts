@@ -8,7 +8,7 @@ export default class QueryValidator {
     private mtoken: string[] = ["MAX", "MIN", "AVG", "SUM"];
     private mstoken: string[] = ["COUNT"];
     private idInQuery: string[]; // make sure the query only has one id
-    private fieldsInQuery: string[]; // all keys appeared in columns after being validated
+    private keysInQuery: string[]; // all keys appeared in columns after being validated
     private transformationKey: string[]; // keys appeared in transformation, if there is a transformation
     private allInsightDataset: InsightDataset[];
     private mfields: string[];
@@ -16,7 +16,7 @@ export default class QueryValidator {
 
     constructor() {
         this.idInQuery = [];
-        this.fieldsInQuery = [];
+        this.keysInQuery = [];
         this.transformationKey = [];
         this.allInsightDataset = [];
     }
@@ -46,7 +46,6 @@ export default class QueryValidator {
         return true;
     }
 
-    // TODO there could be no applyRule inside apply!
     private validateAPPLY(q: any): boolean {
         if (!Array.isArray(q)) {
             return false; // q should be an array, and should have at least one element
@@ -76,7 +75,7 @@ export default class QueryValidator {
                 if (!(this.validateIdstring(key[0]) && this.mfields.includes(key[1]))) {
                     return false;
                 }
-            } else {
+            } else if (this.mstoken.includes(applytoken)) {
                 if (!(this.validateIdstring(key[0])
                     && (this.sfields.includes(key[1]) || this.mfields.includes(key[1])))) {
                     return false;
@@ -120,14 +119,14 @@ export default class QueryValidator {
                     return false;
                 }
             }
-            this.fieldsInQuery.push(mskey);
+            this.keysInQuery.push(mskey);
         }
         return true;
     }
 
     private validateOrder(q: any): boolean {
         if (typeof q === "string") {
-            return this.fieldsInQuery.includes(q);
+            return this.keysInQuery.includes(q);
         } else if (Array.isArray(q)) {
             return false;
         } else {
@@ -142,7 +141,7 @@ export default class QueryValidator {
                 return false;
             }
             for (let anykey of keys) {
-                if (!this.fieldsInQuery.includes(anykey)) {
+                if (!this.keysInQuery.includes(anykey)) {
                     return false;
                 }
             }
@@ -275,8 +274,8 @@ export default class QueryValidator {
         this.idInQuery = id;
     }
 
-    public setFieldsInQuery(field: string[]) {
-        this.fieldsInQuery = field;
+    public setKeysInQuery(field: string[]) {
+        this.keysInQuery = field;
     }
 
     public setTransformationKey(key: string[]) {
