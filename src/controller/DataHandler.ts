@@ -186,56 +186,88 @@ export default class DataHandler {
     }
 
     public getAllRooms(buildings: any[], id: string): Promise<any> {
-        // for (let building of buildings) {
-        //
-        //     for (let room of building["rooms"])
-        // }
-        return Promise.reject();
+        let allRooms: any[] = []
+        for (let building of buildings) {
+            if (!this.isValidBuilding(building)) {
+                continue;
+            }
+            for (let room of building["rooms"]) {
+                if (!this.isValidRoom(room)) {
+                    continue;
+                }
+                allRooms.push(this.makeNewCompleteRoom(building, room, id));
+            }
+        }
+        if (allRooms.length === 0) {
+            return Promise.reject(new InsightError());
+        } else {
+            return Promise.resolve(allRooms);
+        }
     }
 
-    public getURLForBuildings(buildings: any[]): Promise<any[]> {
+    private isValidBuilding(building: any): boolean {
+        return (typeof building["fullname"] === "string"
+            && typeof building["shortname"] === "string"
+            && typeof building["address"] === "string"
+            && typeof building["lat"] === "number"
+            && typeof building["lon"] === "number"
+            && typeof building["rooms"] !== "undefined");
+    }
+
+    private isValidRoom(room: any): boolean {
+        return (typeof room["number"] === "string"
+            && typeof room["seats"] === "number"
+            && typeof room["type"] === "string"
+            && typeof room["href"] === "string"
+            && typeof room["furniture"] === "string");
+    }
+
+    private makeNewCompleteRoom(building: any, room: any, id: string): any {
+        let newRoom: any = {};
+        newRoom[id + "_" + "fullname"] = building["fullname"];
+        newRoom[id + "_" + "shortname"] = building["shortname"];
+        newRoom[id + "_" + "number"] = room["number"];
+        newRoom[id + "_" + "name"] = building["shortname"] + "_" + room["number"];
+        newRoom[id + "_" + "address"] = building["address"];
+        newRoom[id + "_" + "lat"] = building["lat"];
+        newRoom[id + "_" + "lon"] = building["lon"];
+        newRoom[id + "_" + "seats"] = room["seats"];
+        newRoom[id + "_" + "type"] = room["type"];
+        newRoom[id + "_" + "furniture"] = room["furniture"];
+        newRoom[id + "_" + "href"] = room["href"];
+        return newRoom;
+    }
+
+    public getLocationForBuildings(buildings: any[]): Promise<any[]> {
         let allPromises: any[] = buildings.map((building: any) => {
-            return this.getURLForOneBuilding(building);
+            return this.getLocationForOneBuilding(building);
         });
         return Promise.all(allPromises);
     }
 
-    private getURLForOneBuilding(building: any): Promise<any> {
+    private getLocationForOneBuilding(building: any): Promise<any> {
         let address: string = building["address"];
         let convertedAddress: string = address.replace(" ", "%20");
         let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + convertedAddress;
-        building["url"] = url;
-        return Promise.resolve(building);
-        // return this.http.get(url).then((response: GeoResponse) => {
-        //     building["lon"] = response.lon;
-        //     building["lat"] = response.lat;
-        //     return Promise.resolve(building);
-        // }).catch((err: any) => {
-        //     return Promise.reject(new InsightError());
-        // });
-    }
-
-    public getHTTPForAllBuildings(buildings: any[]): Promise<any[]> {
-        let allPromises: any[] = buildings.map((building: any) => {
-            return this.getHttpResponseForOneBuilding(building);
-        });
-        return Promise.all(allPromises);
-    }
-
-    private getHttpResponseForOneBuilding(building: any): Promise<any> {
-        let url: string = building["url"];
-        let data: string = "";
-        this.http.get(url, (res: any) => {
-            res.on("data", (bits: string) => {
-                data += bits;
+        return new Promise((resolve, reject) => {
+            this.http.get(url, (res: any) => {
+                let data: string = "";
+                res.on("data", (bits: string) => {
+                    data += bits;
+                });
+                res.on("end", () => {
+                    let parsedData: GeoResponse = JSON.parse(data);
+                    building["lat"] = parsedData.lat;
+                    building["lon"] = parsedData.lon;
+                    // eslint-disable-next-line no-console
+                    console.log(building);
+                    resolve(building);
+                });
+            }).on("error", (err: any) => {
+                building["lat"] = undefined;
+                building["lon"] = undefined;
+                resolve(building);
             });
-            res.on("end", () => {
-                // eslint-disable-next-line no-console
-                // console.log(JSON.parse(data));
-                return Promise.resolve(JSON.parse(data));
-            });
-        }).on("error", (err: any) => {
-            return Promise.reject(new InsightError());
         });
     }
 

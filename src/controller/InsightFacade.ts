@@ -51,14 +51,19 @@ export default class InsightFacade implements IInsightFacade {
         }).then((result: string) => {
             return this.dataHandler.getAllBuildingInIndex(result);
         }).then((result: any[]) => {
-            return this.dataHandler.getURLForBuildings(result);
-        }).then((result: any[]) => {
-            return this.dataHandler.getHTTPForAllBuildings(result);
+            return this.dataHandler.getLocationForBuildings(result);
         }).then((result: any[]) => {
             return this.dataHandler.getRoomsContentForBuildings(result);
         }).then((result: any[]) => {
-            // return this.dataHandler.getAllRoomsInBuilding(result);
-            return Promise.resolve(result);
+            return this.dataHandler.getAllRoomsInBuilding(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getAllRooms(result, id);
+        }).then((allSections: any[]) => {
+            this.dataHandler.addId(id);
+            return this.dataHandler.myWriteFile(id, allSections);
+        }).then((dataToBeAdd: any[]) => {
+            this.dataHandler.addToDataset(id, kind, dataToBeAdd);
+            return Promise.resolve(this.dataHandler.getAllId());
         }).catch((err: any) => {
             return Promise.reject(err);
         });

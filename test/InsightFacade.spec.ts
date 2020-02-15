@@ -232,15 +232,10 @@ describe("InsightFacade Add/Remove Dataset", function () {
     it("Should add a valid room dataset", function () {
         const id: string = "rooms";
         const expected: string[] = [id];
-        return insightFacade.addDataset(id, datasets["rooms"], InsightDatasetKind.Rooms).then(
-            (result: string[]) => {
+        return insightFacade.addDataset(id, datasets["rooms"], InsightDatasetKind.Rooms).then((result: string[]) => {
                 expect(result).to.deep.equal(expected);
             }).catch((err: any) => {
-            // expect.fail(err, expected, "Should not have rejected");
-            // eslint-disable-next-line no-console
-            console.log(err);
-            // eslint-disable-next-line no-console
-            console.log(err.stack);
+            expect.fail(err, expected, "Should not have rejected");
         });
     });
 
