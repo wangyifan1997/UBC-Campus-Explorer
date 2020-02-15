@@ -239,6 +239,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
             // expect.fail(err, expected, "Should not have rejected");
             // eslint-disable-next-line no-console
             console.log(err);
+            // eslint-disable-next-line no-console
+            console.log(err.stack);
         });
     });
 

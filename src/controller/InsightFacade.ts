@@ -34,10 +34,10 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
-        if (kind === InsightDatasetKind.Courses) {
-            return this.addCourses(id, content, kind);
-        } else {
+        if (kind === InsightDatasetKind.Rooms) {
             return this.addRooms(id, content, kind);
+        } else {
+            return this.addCourses(id, content, kind);
         }
     }
 
@@ -48,8 +48,12 @@ export default class InsightFacade implements IInsightFacade {
             return this.dataHandler.checkFolder(zipData, kind);
         }).then((zipData: JSZip) => {
             return this.dataHandler.getAllBuildings(zipData);
+        }).then((result: string) => {
+            return this.dataHandler.getAllBuildingInIndex(result);
         }).then((result: any[]) => {
-            return this.dataHandler.getLocationForBuildings(result);
+            return this.dataHandler.getURLForBuildings(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getHTTPForAllBuildings(result);
         }).then((result: any[]) => {
             return this.dataHandler.getRoomsContentForBuildings(result);
         }).then((result: any[]) => {

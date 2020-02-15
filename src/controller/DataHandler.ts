@@ -14,7 +14,6 @@ export default class DataHandler {
     private parse5: any;
     private zip: JSZip;
 
-
     constructor() {
         this.http = require("http");
         this.parse5 = require("parse5");
@@ -83,18 +82,16 @@ export default class DataHandler {
         }
     }
 
-    public getAllBuildings(zipData: JSZip): any {
-        zipData.file("rooms/index.htm").async("text").then((content: string) => {
-            return this.getAllBuildingInIndex(content);
-        }).then((buildings: any[]) => {
-            return Promise.resolve(buildings);
-        }).catch((err: any) => {
+    public getAllBuildings(zipData: JSZip): Promise<any> {
+        try {
+            return zipData.file("rooms/index.htm").async("text");
+        } catch (e) {
             return Promise.reject(new InsightError());
-        });
+        }
     }
 
     // TODO 考虑building的path是否存在？（我觉得其实不用）
-    private getAllBuildingInIndex(content: string): Promise<any> {
+    public getAllBuildingInIndex(content: string): Promise<any> {
         let parsedIndex: any = this.parse5.parse(content);
         let allTr: any[] = [];
         this.findElement(parsedIndex, "nodeName", "tr", allTr);
@@ -196,22 +193,48 @@ export default class DataHandler {
         return Promise.reject();
     }
 
-    public getLocationForBuildings(buildings: any[]): Promise<any[]> {
+    public getURLForBuildings(buildings: any[]): Promise<any[]> {
         let allPromises: any[] = buildings.map((building: any) => {
-            return this.getLocationForOneBuilding(building);
+            return this.getURLForOneBuilding(building);
         });
         return Promise.all(allPromises);
     }
 
-    private getLocationForOneBuilding(building: any): Promise<any> {
+    private getURLForOneBuilding(building: any): Promise<any> {
         let address: string = building["address"];
         let convertedAddress: string = address.replace(" ", "%20");
         let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + convertedAddress;
-        return this.http.get(url).then((response: GeoResponse) => {
-            building["lon"] = response.lon;
-            building["lat"] = response.lat;
-            return Promise.resolve(building);
-        }).catch((err: any) => {
+        building["url"] = url;
+        return Promise.resolve(building);
+        // return this.http.get(url).then((response: GeoResponse) => {
+        //     building["lon"] = response.lon;
+        //     building["lat"] = response.lat;
+        //     return Promise.resolve(building);
+        // }).catch((err: any) => {
+        //     return Promise.reject(new InsightError());
+        // });
+    }
+
+    public getHTTPForAllBuildings(buildings: any[]): Promise<any[]> {
+        let allPromises: any[] = buildings.map((building: any) => {
+            return this.getHttpResponseForOneBuilding(building);
+        });
+        return Promise.all(allPromises);
+    }
+
+    private getHttpResponseForOneBuilding(building: any): Promise<any> {
+        let url: string = building["url"];
+        let data: string = "";
+        this.http.get(url, (res: any) => {
+            res.on("data", (bits: string) => {
+                data += bits;
+            });
+            res.on("end", () => {
+                // eslint-disable-next-line no-console
+                // console.log(JSON.parse(data));
+                return Promise.resolve(JSON.parse(data));
+            });
+        }).on("error", (err: any) => {
             return Promise.reject(new InsightError());
         });
     }
@@ -219,13 +242,13 @@ export default class DataHandler {
     public getRoomsContentForBuildings(buildings: any[]): Promise<any> {
         let allPromises: any[] = buildings.map((building: any) => {
             return this.getRoomsContentForOneBuilding(building);
-        })
+        });
         return Promise.all(allPromises);
     }
 
 
     private getRoomsContentForOneBuilding(building: any): Promise<any> {
-        let path = building["path"].replace(".", "rooms")
+        let path = building["path"].replace(".", "rooms");
         return this.zip.file(path).async("text").then((content: string) => {
             building["rooms"] = this.parse5.parse(content);
             return Promise.resolve(building);
