@@ -118,7 +118,8 @@ describe("InsightFacade Add/Remove Dataset", function () {
         zipWithCoursesFolderButInvalidFiles: "./test/data/zipWithCoursesFolderButInvalidFiles.zip",
         zipWithOneSection: "./test/data/zipWithOneSection.zip",
         zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip",
-        zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip"
+        zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip",
+        rooms: "./test/data/rooms.zip"
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
@@ -225,6 +226,19 @@ describe("InsightFacade Add/Remove Dataset", function () {
                 expect(result).to.deep.equal(expected);
             }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset", function () {
+        const id: string = "rooms";
+        const expected: string[] = [id];
+        return insightFacade.addDataset(id, datasets["rooms"], InsightDatasetKind.Rooms).then(
+            (result: string[]) => {
+                expect(result).to.deep.equal(expected);
+            }).catch((err: any) => {
+            // expect.fail(err, expected, "Should not have rejected");
+            // eslint-disable-next-line no-console
+            console.log(err);
         });
     });
 

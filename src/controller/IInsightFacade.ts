@@ -15,17 +15,10 @@ export interface InsightDataset {
     numRows: number;
 }
 
-export interface CourseSection {
-    dept: string;
-    id: string;
-    avg: number;
-    instructor: string;
-    title: string;
-    pass: number;
-    fail: number;
-    audit: number;
-    uuid: string;
-    year: number;
+export interface GeoResponse {
+    lat?: number;
+    lon?: number;
+    error?: string;
 }
 
 export class InsightError extends Error {

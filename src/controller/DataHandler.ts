@@ -1,4 +1,4 @@
-import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
+import {GeoResponse, InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
 import * as JSZip from "jszip";
 import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
@@ -10,14 +10,21 @@ export default class DataHandler {
     private folder: string;
     private allInsightDataset: InsightDataset[];
     private sectionCounter: number;
+    private http: any;
+    private parse5: any;
+    private zip: JSZip;
+
 
     constructor() {
+        this.http = require("http");
+        this.parse5 = require("parse5");
         this.allId = [];
         this.allDataset = {};
         this.path = "./data";
         this.folder = "courses";
         this.allInsightDataset = [];
         this.sectionCounter = 0;
+        this.zip = new JSZip();
     }
 
     private isIdIllegal(id: string): boolean {
@@ -35,6 +42,10 @@ export default class DataHandler {
             }
             return count === id.length;
         }
+    }
+
+    public resetZip(): void {
+        this.zip = new JSZip();
     }
 
     private isIdAdded(id: string): boolean {
@@ -65,16 +76,172 @@ export default class DataHandler {
 
     public myLoadAsync(content: string) {
         try {
-            let zip: JSZip = new JSZip();
-            return zip.loadAsync(content, {base64: true});
+            this.resetZip();
+            return this.zip.loadAsync(content, {base64: true});
         } catch (e) {
             return Promise.reject(new InsightError());
         }
     }
 
-    public checkCoursesFolder(zipData: JSZip): Promise<any> {
-        let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
-        if (coursesFolder.length === 0) {
+    public getAllBuildings(zipData: JSZip): any {
+        zipData.file("rooms/index.htm").async("text").then((content: string) => {
+            return this.getAllBuildingInIndex(content);
+        }).then((buildings: any[]) => {
+            return Promise.resolve(buildings);
+        }).catch((err: any) => {
+            return Promise.reject(new InsightError());
+        });
+    }
+
+    // TODO 考虑building的path是否存在？（我觉得其实不用）
+    private getAllBuildingInIndex(content: string): Promise<any> {
+        let parsedIndex: any = this.parse5.parse(content);
+        let allTr: any[] = [];
+        this.findElement(parsedIndex, "nodeName", "tr", allTr);
+        let buildingResult: any[] = [];
+        for (let tr of allTr) {
+            try {
+                let building: any = this.makeBuilding(tr);
+                if (Object.keys(building).length < 4) {
+                    continue;
+                }
+                buildingResult.push(this.makeBuilding(tr));
+            } catch (err) {
+                continue;
+            }
+        }
+        return Promise.resolve(buildingResult);
+    }
+
+    public getAllRoomsInBuilding(buildings: any[]): Promise<any> {
+        for (let building of buildings) {
+            let allRooms: any = building["rooms"];
+            let allTr: any[] = [];
+            this.findElement(allRooms, "nodeName", "tr", allTr);
+            let roomResult: any[] = [];
+            for (let tr of allTr) {
+                try {
+                    roomResult.push(this.makeRoom(tr));
+                } catch (err) {
+                    continue;
+                }
+            }
+            building["rooms"] = roomResult;
+        }
+        return Promise.resolve(buildings);
+    }
+
+    private makeRoom(tr: any): any {
+        let room: any = {};
+        for (let element of tr["childNodes"]) {
+            if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("room-number")) {
+                room["number"] = element["childNodes"][1]["attrs"][0]["value"];
+            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("capacity")) {
+                let seats: string = element["childNodes"][0]["value"].replace(/(\n)/gm, "").trim();
+                if (seats === "") {
+                    room["seats"] = 0;
+                } else {
+                    room["seats"] = Number(seats);
+                }
+            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("furniture")) {
+                let furniture: string = element["childNodes"][0]["value"];
+                room["furniture"] = furniture.replace(/(\n)/gm, "").trim();
+            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("room-type")) {
+                let type = element["childNodes"][0]["value"];
+                room["type"] = type.replace(/(\n)/gm, "").trim();
+            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("field-nothing")) {
+                room["href"] = element["childNodes"][1]["attrs"][0]["value"];
+            }
+        }
+        return room;
+    }
+
+    private findElement(obj: any, type: string, target: string, result: any[]): void {
+        if (typeof obj === "undefined") {
+            return;
+        } else if (obj[type] === target) {
+            result.push(obj);
+        } else {
+            if (typeof obj["childNodes"] !== "undefined") {
+                for (let node of obj["childNodes"]) {
+                    this.findElement(node, type, target, result);
+                }
+            }
+        }
+    }
+
+    private makeBuilding(tr: any): any {
+        let building: any = {};
+        for (let element of tr["childNodes"]) {
+            if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("field-nothing")) {
+                building["path"] = element["childNodes"][1]["attrs"][0]["value"];
+            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("building-code")) {
+                let shortname: string = element["childNodes"][0]["value"];
+                building["shortname"] = shortname.replace(/(\n)/gm, "").trim();
+            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("title")) {
+                building["fullname"] = element["childNodes"][1]["childNodes"][0]["value"];
+            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("address")) {
+                let address = element["childNodes"][0]["value"];
+                building["address"] = address.replace(/(\n)/gm, "").trim();
+            }
+        }
+        return building;
+    }
+
+    public getAllRooms(buildings: any[], id: string): Promise<any> {
+        // for (let building of buildings) {
+        //
+        //     for (let room of building["rooms"])
+        // }
+        return Promise.reject();
+    }
+
+    public getLocationForBuildings(buildings: any[]): Promise<any[]> {
+        let allPromises: any[] = buildings.map((building: any) => {
+            return this.getLocationForOneBuilding(building);
+        });
+        return Promise.all(allPromises);
+    }
+
+    private getLocationForOneBuilding(building: any): Promise<any> {
+        let address: string = building["address"];
+        let convertedAddress: string = address.replace(" ", "%20");
+        let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + convertedAddress;
+        return this.http.get(url).then((response: GeoResponse) => {
+            building["lon"] = response.lon;
+            building["lat"] = response.lat;
+            return Promise.resolve(building);
+        }).catch((err: any) => {
+            return Promise.reject(new InsightError());
+        });
+    }
+
+    public getRoomsContentForBuildings(buildings: any[]): Promise<any> {
+        let allPromises: any[] = buildings.map((building: any) => {
+            return this.getRoomsContentForOneBuilding(building);
+        })
+        return Promise.all(allPromises);
+    }
+
+
+    private getRoomsContentForOneBuilding(building: any): Promise<any> {
+        let path = building["path"].replace(".", "rooms")
+        return this.zip.file(path).async("text").then((content: string) => {
+            building["rooms"] = this.parse5.parse(content);
+            return Promise.resolve(building);
+        }).catch((err: any) => {
+            return Promise.reject(new InsightError());
+        });
+    }
+
+    public checkFolder(zipData: JSZip, kind: InsightDatasetKind): Promise<any> {
+        let folder: JSZipObject[];
+        if (kind === InsightDatasetKind.Courses) {
+            folder = zipData.folder(/courses/);
+        } else if (kind === InsightDatasetKind.Rooms) {
+            folder = zipData.folder(/rooms/);
+        }
+        if (folder.length === 0) {
             return Promise.reject(InsightError);
         }
         return Promise.resolve(zipData);

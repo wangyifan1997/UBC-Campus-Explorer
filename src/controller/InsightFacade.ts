@@ -1,6 +1,12 @@
 import Log from "../Util";
-import {IInsightFacade, InsightDataset, InsightDatasetKind, ResultTooLargeError} from "./IInsightFacade";
-import {InsightError, NotFoundError} from "./IInsightFacade";
+import {
+    IInsightFacade,
+    InsightDataset,
+    InsightDatasetKind,
+    InsightError,
+    NotFoundError,
+    ResultTooLargeError
+} from "./IInsightFacade";
 import * as JSZip from "jszip";
 import DataHandler from "./DataHandler";
 import QueryValidator from "./QueryValidator";
@@ -28,14 +34,41 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
+        if (kind === InsightDatasetKind.Courses) {
+            return this.addCourses(id, content, kind);
+        } else {
+            return this.addRooms(id, content, kind);
+        }
+    }
+
+    private addRooms(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.dataHandler.isIdOkToAdd(id).then(() => {
             return this.dataHandler.myLoadAsync(content);
         }).then((zipData: JSZip) => {
-            return this.dataHandler.checkCoursesFolder(zipData);
+            return this.dataHandler.checkFolder(zipData, kind);
+        }).then((zipData: JSZip) => {
+            return this.dataHandler.getAllBuildings(zipData);
+        }).then((result: any[]) => {
+            return this.dataHandler.getLocationForBuildings(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getRoomsContentForBuildings(result);
+        }).then((result: any[]) => {
+            // return this.dataHandler.getAllRoomsInBuilding(result);
+            return Promise.resolve(result);
+        }).catch((err: any) => {
+            return Promise.reject(err);
+        });
+    }
+
+    private addCourses(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
+        return this.dataHandler.isIdOkToAdd(id).then(() => {
+            return this.dataHandler.myLoadAsync(content);
+        }).then((zipData: JSZip) => {
+            return this.dataHandler.checkFolder(zipData, kind);
         }).then((zipData: JSZip) => {
             return this.dataHandler.loadAllFilesToAllPromises(zipData);
-        }).then((result: string[]) => {
-            return this.dataHandler.parseCourseJSON(result);
+        }).then((res: string[]) => {
+            return this.dataHandler.parseCourseJSON(res);
         }).then((allCourses: string[]) => {
             return this.dataHandler.getAllSections(allCourses, id);
         }).then((allSections: any[]) => {
