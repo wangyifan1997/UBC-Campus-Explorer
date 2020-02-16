@@ -2,9 +2,10 @@ import {GeoResponse, InsightDataset, InsightDatasetKind, InsightError, NotFoundE
 import * as JSZip from "jszip";
 import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
+import {type} from "os";
 
 export default class DataHandler {
-    private allDataset: {[index: string]: any};
+    private allDataset: { [index: string]: any };
     private path: string;
     private folder: string;
     private sectionCounter: number;
@@ -86,7 +87,6 @@ export default class DataHandler {
         }
     }
 
-    // TODO 考虑building的path是否存在？（我觉得其实不用）
     public getAllBuildingInIndex(content: string): Promise<any> {
         let parsedIndex: any = this.parse5.parse(content);
         let allTr: any[] = [];
@@ -95,10 +95,10 @@ export default class DataHandler {
         for (let tr of allTr) {
             try {
                 let building: any = this.makeBuilding(tr);
-                if (Object.keys(building).length < 4) {
-                    continue;
+                if (typeof building["path"] !== "undefined"
+                    && this.zip.file(building["path"].replace(".", "rooms")) !== null) {
+                    buildingResult.push(this.makeBuilding(tr));
                 }
-                buildingResult.push(this.makeBuilding(tr));
             } catch (err) {
                 continue;
             }
@@ -140,8 +140,8 @@ export default class DataHandler {
                 let furniture: string = element["childNodes"][0]["value"];
                 room["furniture"] = furniture.replace(/(\n)/gm, "").trim();
             } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("room-type")) {
-                let type = element["childNodes"][0]["value"];
-                room["type"] = type.replace(/(\n)/gm, "").trim();
+                let typeOf = element["childNodes"][0]["value"];
+                room["type"] = typeOf.replace(/(\n)/gm, "").trim();
             } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("field-nothing")) {
                 room["href"] = element["childNodes"][1]["attrs"][0]["value"];
             }
@@ -149,15 +149,15 @@ export default class DataHandler {
         return room;
     }
 
-    private findElement(obj: any, type: string, target: string, result: any[]): void {
+    private findElement(obj: any, typeOf: string, target: string, result: any[]): void {
         if (typeof obj === "undefined") {
             return;
-        } else if (obj[type] === target) {
+        } else if (obj[typeOf] === target) {
             result.push(obj);
         } else {
             if (typeof obj["childNodes"] !== "undefined") {
                 for (let node of obj["childNodes"]) {
-                    this.findElement(node, type, target, result);
+                    this.findElement(node, typeOf, target, result);
                 }
             }
         }
@@ -243,6 +243,11 @@ export default class DataHandler {
 
     private getLocationForOneBuilding(building: any): Promise<any> {
         let address: string = building["address"];
+        if (typeof address === "undefined") {
+            building["lat"] = undefined;
+            building["lon"] = undefined;
+            return Promise.resolve(building);
+        }
         let convertedAddress: string = address.replace(" ", "%20");
         let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + convertedAddress;
         return new Promise((resolve, reject) => {
@@ -291,7 +296,7 @@ export default class DataHandler {
             folder = zipData.folder(/rooms/);
         }
         if (folder.length === 0) {
-            return Promise.reject(InsightError);
+            return Promise.reject(new InsightError());
         }
         return Promise.resolve(zipData);
     }

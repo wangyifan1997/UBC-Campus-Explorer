@@ -119,7 +119,11 @@ describe("InsightFacade Add/Remove Dataset", function () {
         zipWithOneSection: "./test/data/zipWithOneSection.zip",
         zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip",
         zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip",
-        rooms: "./test/data/rooms.zip"
+        rooms: "./test/data/rooms.zip",
+        emptyRooms: "./test/data/emptyRooms.zip",
+        roomsWithoutWOOD: "./test/data/roomsWithoutWOOD.zip",
+        roomsWithoutWOODShortName: "./test/data/roomsWithoutWOODShortName.zip",
+        roomsWithoutWOODAddress: "./test/data/roomsWithoutWOODAddress.zip"
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
@@ -253,8 +257,56 @@ describe("InsightFacade Add/Remove Dataset", function () {
         const id: string = "rooms";
         const expected: string[] = [id];
         return insightFacade.addDataset(id, datasets["rooms"], InsightDatasetKind.Rooms).then((result: string[]) => {
-                expect(result).to.deep.equal(expected);
-            }).catch((err: any) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset without WOOD", function () {
+        const id: string = "roomsWithoutWOOD";
+        const expected: InsightDataset[] = [{
+            id: "roomsWithoutWOOD",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 348
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset without WOOD shortname", function () {
+        const id: string = "roomsWithoutWOODShortName";
+        const expected: InsightDataset[] = [{
+            id: "roomsWithoutWOODShortName",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 348
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset with WOOD address being undefined", function () {
+        const id: string = "roomsWithoutWOODAddress";
+        const expected: InsightDataset[] = [{
+            id: "roomsWithoutWOODAddress",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 348
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         });
     });
@@ -291,6 +343,15 @@ describe("InsightFacade Add/Remove Dataset", function () {
     it("Should not add an empty zip with no folders", function () {
         const id: string = "emptyZipWithNoFolder";
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add an empty room zip", function () {
+        const id: string = "emptyRooms";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
             expect.fail();
         }).catch((err: any) => {
             expect(err).to.be.instanceOf(InsightError);
