@@ -4,11 +4,9 @@ import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
 
 export default class DataHandler {
-    private allId: string[];
-    private allDataset: any;
+    private allDataset: {[index: string]: any};
     private path: string;
     private folder: string;
-    private allInsightDataset: InsightDataset[];
     private sectionCounter: number;
     private http: any;
     private parse5: any;
@@ -17,11 +15,9 @@ export default class DataHandler {
     constructor() {
         this.http = require("http");
         this.parse5 = require("parse5");
-        this.allId = [];
         this.allDataset = {};
         this.path = "./data";
         this.folder = "courses";
-        this.allInsightDataset = [];
         this.sectionCounter = 0;
         this.zip = new JSZip();
     }
@@ -48,7 +44,7 @@ export default class DataHandler {
     }
 
     private isIdAdded(id: string): boolean {
-        return this.allId.includes(id);
+        return Object.keys(this.allDataset).includes(id);
     }
 
     public isIdOkToAdd(id: string): Promise<any> {
@@ -186,7 +182,7 @@ export default class DataHandler {
     }
 
     public getAllRooms(buildings: any[], id: string): Promise<any> {
-        let allRooms: any[] = []
+        let allRooms: any[] = [];
         for (let building of buildings) {
             if (!this.isValidBuilding(building)) {
                 continue;
@@ -259,8 +255,6 @@ export default class DataHandler {
                     let parsedData: GeoResponse = JSON.parse(data);
                     building["lat"] = parsedData.lat;
                     building["lon"] = parsedData.lon;
-                    // eslint-disable-next-line no-console
-                    console.log(building);
                     resolve(building);
                 });
             }).on("error", (err: any) => {
@@ -412,9 +406,9 @@ export default class DataHandler {
         }
     }
 
-    public myWriteFile(id: string, allSections: any[]): Promise<any> {
+    public myWriteFile(id: string, allSections: any[], kind: InsightDatasetKind): Promise<any> {
         this.checkDir();
-        let data: any = this.createDataToBeAdd(id, allSections);
+        let data: any = this.createDataToBeAdd(id, allSections, kind);
         try {
             fs.writeFileSync(this.path + "/" + id, JSON.stringify(data));
         } catch (e) {
@@ -435,12 +429,10 @@ export default class DataHandler {
 
     public readDataset() {
         this.checkDir();
-        this.allId = this.myReadEntryNames(this.path);
-        for (let id of this.allId) {
+        for (let id of this.myReadEntryNames(this.path)) {
             let writtenFile: any = this.myReadFile(this.path + "/" + id);
             writtenFile = JSON.parse(writtenFile);
-            let sections: any[] = writtenFile[id];
-            this.allDataset[id] = sections;
+            this.allDataset[id] = writtenFile;
         }
     }
 
@@ -456,64 +448,42 @@ export default class DataHandler {
         try {
             fs.unlinkSync(this.path + "/" + id);
             this.removeFromDataset(id);
-            this.removeId(id);
         } catch (e) {
             throw new InsightError();
         }
     }
 
-    private createDataToBeAdd(id: string, allSections: any[]): any {
-        let dataToBeAdd: { [id: string]: any } = {};
-        dataToBeAdd[id] = allSections;
+    private createDataToBeAdd(id: string, allSections: any[], kind: InsightDatasetKind): any {
+        let dataToBeAdd: any = {};
+        dataToBeAdd["data"] = allSections;
+        dataToBeAdd["id"] = id;
+        dataToBeAdd["kind"] = kind;
         return dataToBeAdd;
     }
 
-    public addId(id: string) {
-        this.allId.push(id);
-    }
-
-    private removeId(id: string) {
-        for (let i: number = 0; i < this.allId.length; i++) {
-            if (this.allId[i] === id) {
-                this.allId.splice(++i, 1);
-                return;
-            }
-        }
-    }
-
-    private addInsightDataset(id: string, kind: InsightDatasetKind) {
-        let data: InsightDataset = {id: id, kind: kind, numRows: this.sectionCounter};
-        this.allInsightDataset.push(data);
-    }
-
-    private removeInsightDataset(id: string) {
-        for (let i: number = 0; i < this.allInsightDataset.length; i++) {
-            if (this.allInsightDataset[i].id === id) {
-                this.allInsightDataset.splice(++i, 1);
-                return;
-            }
-        }
-    }
-
     public addToDataset(id: string, kind: InsightDatasetKind, dataToBeAdd: { [id: string]: any }) {
-        this.allDataset[id] = dataToBeAdd[id];
-        this.addInsightDataset(id, kind);
+        this.allDataset[id] = dataToBeAdd;
     }
 
     private removeFromDataset(id: string) {
         delete this.allDataset[id];
-        this.removeInsightDataset(id);
-    }
 
-    public getAllId(): string[] {
-        return this.allId;
     }
 
     public getAllDataset(): any {
         return this.allDataset;
     }
 
-    public getAllInsightDataset(): InsightDataset[] {
-        return this.allInsightDataset;
+    public getAllInsightDataset(): any {
+        let allInsightDataset: InsightDataset[] = [];
+        for (let dataset of Object.values(this.allDataset)) {
+            let id: string = dataset["id"];
+            let kind: InsightDatasetKind = dataset["kind"];
+            let numRows: number = dataset["data"].length;
+            let insightDataset: InsightDataset
+                = {id: id, kind: kind, numRows: numRows};
+            allInsightDataset.push(insightDataset);
+        }
+        return allInsightDataset;
     }
 }

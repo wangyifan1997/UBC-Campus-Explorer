@@ -1,7 +1,7 @@
 import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError, ResultTooLargeError} from "./IInsightFacade";
 import {Decimal} from "decimal.js";
 
-export default class QueryValidator {
+export default class QueryFinder {
     private idInQuery: string;
     private allDataset: any;
 
@@ -126,7 +126,7 @@ export default class QueryValidator {
 
     private findMatchingWhere(q: any): any[] {
         if (Object.keys(q).length === 0) {
-            return this.allDataset[this.idInQuery];
+            return this.allDataset[this.idInQuery]["data"];
         } else {
             return this.findMatchingFilter(q);
         }
@@ -155,7 +155,7 @@ export default class QueryValidator {
                 }
                 return Array.from(allORReturns.values());
             case "NOT":
-                let allSections: any[] = this.allDataset[this.idInQuery];
+                let allSections: any[] = this.allDataset[this.idInQuery]["data"];
                 let currSections = this.findMatchingFilter(value);
                 let result: any[] = [];
                 for (let sections of allSections) {
@@ -181,7 +181,7 @@ export default class QueryValidator {
         let result: any[] = [];
         let mkey: string = Object.keys(value)[0];
         let num: any = Object.values(value)[0];
-        let allSections: any[] = this.allDataset[this.idInQuery];
+        let allSections: any[] = this.allDataset[this.idInQuery]["data"];
         switch (type) {
             case "GT":
                 for (let section of allSections) {
@@ -214,7 +214,7 @@ export default class QueryValidator {
         let result: any[] = [];
         let skey: string = Object.keys(value)[0];
         let str: any = Object.values(value)[0];
-        let allSections: any[] = this.allDataset[this.idInQuery];
+        let allSections: any[] = this.allDataset[this.idInQuery]["data"];
         if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
             for (let section of allSections) {
                 if (section[skey].includes(str.slice(1, -1))) {

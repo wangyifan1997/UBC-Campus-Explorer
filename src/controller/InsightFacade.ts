@@ -59,11 +59,10 @@ export default class InsightFacade implements IInsightFacade {
         }).then((result: any[]) => {
             return this.dataHandler.getAllRooms(result, id);
         }).then((allSections: any[]) => {
-            this.dataHandler.addId(id);
-            return this.dataHandler.myWriteFile(id, allSections);
+            return this.dataHandler.myWriteFile(id, allSections, kind);
         }).then((dataToBeAdd: any[]) => {
             this.dataHandler.addToDataset(id, kind, dataToBeAdd);
-            return Promise.resolve(this.dataHandler.getAllId());
+            return Promise.resolve(Object.keys(this.dataHandler.getAllDataset()));
         }).catch((err: any) => {
             return Promise.reject(err);
         });
@@ -81,11 +80,10 @@ export default class InsightFacade implements IInsightFacade {
         }).then((allCourses: string[]) => {
             return this.dataHandler.getAllSections(allCourses, id);
         }).then((allSections: any[]) => {
-            this.dataHandler.addId(id);
-            return this.dataHandler.myWriteFile(id, allSections);
+            return this.dataHandler.myWriteFile(id, allSections, kind);
         }).then((dataToBeAdd: any[]) => {
             this.dataHandler.addToDataset(id, kind, dataToBeAdd);
-            return Promise.resolve(this.dataHandler.getAllId());
+            return Promise.resolve(Object.keys(this.dataHandler.getAllDataset()));
         }).catch((err: any) => {
             return Promise.reject(new InsightError());
         });

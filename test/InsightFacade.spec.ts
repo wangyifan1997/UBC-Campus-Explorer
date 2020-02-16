@@ -217,6 +217,26 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("Should list a room dataset", () => {
+        const id: string = "rooms";
+        const expected: InsightDataset[] = [{
+            id: "rooms",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 364
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            expect(result).to.deep.equal(["rooms"]);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail();
+        });
+    });
+
     // This is a unit test. You should create more like this!
     it("Should add a valid dataset", function () {
         const id: string = "test1";
