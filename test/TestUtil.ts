@@ -112,4 +112,16 @@ export default class TestUtil {
 
         }
     }
+
+    /**
+     * Returns a one parameter function that encloses `test` and `done`.
+     * The function can be passed directly to a .then(..) or .catch(..)
+     * @param test {ITestQuery} the test that is being checked
+     * @param done {any} A Mocha function that signals the test is over
+     */
+    public static getQueryChecker(test: ITestQuery, done: any): (response: any) => void {
+        return function (response: any): void {
+            return TestUtil.checkQueryResult(test, response, done);
+        };
+    }
 }
