@@ -51,43 +51,51 @@ export default class QueryFinder {
                 let applyKey: string = Object.keys(applyRule)[0];
                 let applyToken: string = Object.keys(applyRule[applyKey])[0];
                 let k: string = applyRule[applyKey][applyToken];
-                switch (applyToken) {
-                    case "MAX":
-                        let numMax: number[] = [];
-                        for (let section of cluster) {
-                            numMax.push(section[k]);
-                        }
-                        grouped[applyKey] = Math.max.apply(numMax);
-                        break;
-                    case "MIN":
-                        let numMin: number[] = [];
-                        for (let section of cluster) {
-                            numMin.push(section[k]);
-                        }
-                        grouped[applyKey] = Math.min.apply(numMin);
-                        break;
-                    case "AVG":
-                        let total: Decimal = new Decimal(0);
-                        for (let section of cluster) {
-                            total = total.plus(new Decimal(section[k]));
-                        }
-                        grouped[applyKey] = Number((total.toNumber() / cluster.length).toFixed(2));
-                        break;
-                    case "COUNT":
-                        grouped[applyKey] = cluster.length;
-                        break;
-                    case "SUM":
-                        let sum: number = 0;
-                        for (let section of cluster) {
-                            result += section[k];
-                        }
-                        grouped[applyKey] = Number(sum.toFixed(2));
-                        break;
-                }
+                this.findToken(applyKey, applyToken, k, grouped, cluster);
             }
             result.push(grouped);
         }
         return result;
+    }
+
+    private findToken(applyKey: string, applyToken: string, k: string, grouped: any, cluster: any[]) {
+        switch (applyToken) {
+            case "MAX":
+                let numMax: number[] = [];
+                for (let section of cluster) {
+                    numMax.push(section[k]);
+                }
+                grouped[applyKey] = Math.max.apply(null, numMax);
+                break;
+            case "MIN":
+                let numMin: number[] = [];
+                for (let section of cluster) {
+                    numMin.push(section[k]);
+                }
+                grouped[applyKey] = Math.min.apply(null, numMin);
+                break;
+            case "AVG":
+                let total: Decimal = new Decimal(0);
+                for (let section of cluster) {
+                    total = total.plus(new Decimal(section[k]));
+                }
+                grouped[applyKey] = Number((total.toNumber() / cluster.length).toFixed(2));
+                break;
+            case "COUNT":
+                let set: Set<any> = new Set<any>();
+                for (let section of cluster) {
+                    set.add(section[k]);
+                }
+                grouped[applyKey] = set.size;
+                break;
+            case "SUM":
+                let sum: number = 0;
+                for (let section of cluster) {
+                    sum += section[k];
+                }
+                grouped[applyKey] = Number(sum.toFixed(2));
+                break;
+        }
     }
 
     private findMatchingOPTIONS(q: any, los: any[]): any[] {

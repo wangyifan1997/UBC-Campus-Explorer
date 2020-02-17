@@ -1,0 +1,25 @@
+{
+    "title": "valid count title",
+    "query":{
+      "WHERE": {},
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_year",
+          "times"
+        ]
+      },
+      "TRANSFORMATIONS": {
+        "GROUP": [
+          "courses_year"
+        ],
+        "APPLY": [
+          {
+            "times": {
+              "COUNT": "courses_year"
+            }
+          }
+        ]
+      }
+    },
+    "isQueryValid": true,
+    "result":[{"courses_year":1900,"times":1},{"courses_year":2007,"times":1},{"courses_year":2008,"times":1},{"courses_year":2009,"times":1},{"courses_year":2010,"times":1},{"courses_year":2011,"times":1},{"courses_year":2012,"times":1},{"courses_year":2013,"times":1},{"courses_year":2014,"times":1},{"courses_year":2015,"times":1},{"courses_year":2016,"times":1}]}
