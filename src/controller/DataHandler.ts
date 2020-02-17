@@ -3,24 +3,23 @@ import * as JSZip from "jszip";
 import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
 import {type} from "os";
+import RoomDataHandler from "./RoomDataHandler";
+import CourseDataHandler from "./CourseDataHandler";
+
 
 export default class DataHandler {
     private allDataset: { [index: string]: any };
     private path: string;
-    private folder: string;
-    private sectionCounter: number;
-    private http: any;
-    private parse5: any;
     private zip: JSZip;
+    private roomDataHandler: RoomDataHandler;
+    private courseDataHandler: CourseDataHandler;
 
     constructor() {
-        this.http = require("http");
-        this.parse5 = require("parse5");
         this.allDataset = {};
         this.path = "./data";
-        this.folder = "courses";
-        this.sectionCounter = 0;
         this.zip = new JSZip();
+        this.roomDataHandler = new RoomDataHandler();
+        this.courseDataHandler = new CourseDataHandler();
     }
 
     private isIdIllegal(id: string): boolean {
@@ -80,212 +79,27 @@ export default class DataHandler {
     }
 
     public getAllBuildings(zipData: JSZip): Promise<any> {
-        try {
-            return zipData.file("rooms/index.htm").async("text");
-        } catch (e) {
-            return Promise.reject(new InsightError());
-        }
+        return this.roomDataHandler.getAllBuildings(zipData);
     }
 
     public getAllBuildingInIndex(content: string): Promise<any> {
-        let parsedIndex: any = this.parse5.parse(content);
-        let allTr: any[] = [];
-        this.findElement(parsedIndex, "nodeName", "tr", allTr);
-        let buildingResult: any[] = [];
-        for (let tr of allTr) {
-            try {
-                let building: any = this.makeBuilding(tr);
-                if (typeof building["path"] !== "undefined"
-                    && this.zip.file(building["path"].replace(".", "rooms")) !== null) {
-                    buildingResult.push(this.makeBuilding(tr));
-                }
-            } catch (err) {
-                continue;
-            }
-        }
-        return Promise.resolve(buildingResult);
+        return this.roomDataHandler.getAllBuildingInIndex(content, this.zip);
     }
 
     public getAllRoomsInBuilding(buildings: any[]): Promise<any> {
-        for (let building of buildings) {
-            let allRooms: any = building["rooms"];
-            let allTr: any[] = [];
-            this.findElement(allRooms, "nodeName", "tr", allTr);
-            let roomResult: any[] = [];
-            for (let tr of allTr) {
-                try {
-                    roomResult.push(this.makeRoom(tr));
-                } catch (err) {
-                    continue;
-                }
-            }
-            building["rooms"] = roomResult;
-        }
-        return Promise.resolve(buildings);
-    }
-
-    private makeRoom(tr: any): any {
-        let room: any = {};
-        for (let element of tr["childNodes"]) {
-            if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("room-number")) {
-                room["number"] = element["childNodes"][1]["attrs"][0]["value"];
-            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("capacity")) {
-                let seats: string = element["childNodes"][0]["value"].replace(/(\n)/gm, "").trim();
-                if (seats === "") {
-                    room["seats"] = 0;
-                } else {
-                    room["seats"] = Number(seats);
-                }
-            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("furniture")) {
-                let furniture: string = element["childNodes"][0]["value"];
-                room["furniture"] = furniture.replace(/(\n)/gm, "").trim();
-            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("room-type")) {
-                let typeOf = element["childNodes"][0]["value"];
-                room["type"] = typeOf.replace(/(\n)/gm, "").trim();
-            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("field-nothing")) {
-                room["href"] = element["childNodes"][1]["attrs"][0]["value"];
-            }
-        }
-        return room;
-    }
-
-    private findElement(obj: any, typeOf: string, target: string, result: any[]): void {
-        if (typeof obj === "undefined") {
-            return;
-        } else if (obj[typeOf] === target) {
-            result.push(obj);
-        } else {
-            if (typeof obj["childNodes"] !== "undefined") {
-                for (let node of obj["childNodes"]) {
-                    this.findElement(node, typeOf, target, result);
-                }
-            }
-        }
-    }
-
-    private makeBuilding(tr: any): any {
-        let building: any = {};
-        for (let element of tr["childNodes"]) {
-            if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("field-nothing")) {
-                building["path"] = element["childNodes"][1]["attrs"][0]["value"];
-            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("building-code")) {
-                let shortname: string = element["childNodes"][0]["value"];
-                building["shortname"] = shortname.replace(/(\n)/gm, "").trim();
-            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("title")) {
-                building["fullname"] = element["childNodes"][1]["childNodes"][0]["value"];
-            } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("address")) {
-                let address = element["childNodes"][0]["value"];
-                building["address"] = address.replace(/(\n)/gm, "").trim();
-            }
-        }
-        return building;
+        return this.roomDataHandler.getAllRoomsInBuilding(buildings);
     }
 
     public getAllRooms(buildings: any[], id: string): Promise<any> {
-        let allRooms: any[] = [];
-        for (let building of buildings) {
-            if (!this.isValidBuilding(building)) {
-                continue;
-            }
-            for (let room of building["rooms"]) {
-                if (!this.isValidRoom(room)) {
-                    continue;
-                }
-                allRooms.push(this.makeNewCompleteRoom(building, room, id));
-            }
-        }
-        if (allRooms.length === 0) {
-            return Promise.reject(new InsightError());
-        } else {
-            return Promise.resolve(allRooms);
-        }
-    }
-
-    private isValidBuilding(building: any): boolean {
-        return (typeof building["fullname"] === "string"
-            && typeof building["shortname"] === "string"
-            && typeof building["address"] === "string"
-            && typeof building["lat"] === "number"
-            && typeof building["lon"] === "number"
-            && typeof building["rooms"] !== "undefined");
-    }
-
-    private isValidRoom(room: any): boolean {
-        return (typeof room["number"] === "string"
-            && typeof room["seats"] === "number"
-            && typeof room["type"] === "string"
-            && typeof room["href"] === "string"
-            && typeof room["furniture"] === "string");
-    }
-
-    private makeNewCompleteRoom(building: any, room: any, id: string): any {
-        let newRoom: any = {};
-        newRoom[id + "_" + "fullname"] = building["fullname"];
-        newRoom[id + "_" + "shortname"] = building["shortname"];
-        newRoom[id + "_" + "number"] = room["number"];
-        newRoom[id + "_" + "name"] = building["shortname"] + "_" + room["number"];
-        newRoom[id + "_" + "address"] = building["address"];
-        newRoom[id + "_" + "lat"] = building["lat"];
-        newRoom[id + "_" + "lon"] = building["lon"];
-        newRoom[id + "_" + "seats"] = room["seats"];
-        newRoom[id + "_" + "type"] = room["type"];
-        newRoom[id + "_" + "furniture"] = room["furniture"];
-        newRoom[id + "_" + "href"] = room["href"];
-        return newRoom;
+        return this.roomDataHandler.getAllRooms(buildings, id);
     }
 
     public getLocationForBuildings(buildings: any[]): Promise<any[]> {
-        let allPromises: any[] = buildings.map((building: any) => {
-            return this.getLocationForOneBuilding(building);
-        });
-        return Promise.all(allPromises);
-    }
-
-    private getLocationForOneBuilding(building: any): Promise<any> {
-        let address: string = building["address"];
-        if (typeof address === "undefined") {
-            building["lat"] = undefined;
-            building["lon"] = undefined;
-            return Promise.resolve(building);
-        }
-        let convertedAddress: string = address.replace(" ", "%20");
-        let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + convertedAddress;
-        return new Promise((resolve, reject) => {
-            this.http.get(url, (res: any) => {
-                let data: string = "";
-                res.on("data", (bits: string) => {
-                    data += bits;
-                });
-                res.on("end", () => {
-                    let parsedData: GeoResponse = JSON.parse(data);
-                    building["lat"] = parsedData.lat;
-                    building["lon"] = parsedData.lon;
-                    resolve(building);
-                });
-            }).on("error", (err: any) => {
-                building["lat"] = undefined;
-                building["lon"] = undefined;
-                resolve(building);
-            });
-        });
+        return this.roomDataHandler.getLocationForBuildings(buildings);
     }
 
     public getRoomsContentForBuildings(buildings: any[]): Promise<any> {
-        let allPromises: any[] = buildings.map((building: any) => {
-            return this.getRoomsContentForOneBuilding(building);
-        });
-        return Promise.all(allPromises);
-    }
-
-
-    private getRoomsContentForOneBuilding(building: any): Promise<any> {
-        let path = building["path"].replace(".", "rooms");
-        return this.zip.file(path).async("text").then((content: string) => {
-            building["rooms"] = this.parse5.parse(content);
-            return Promise.resolve(building);
-        }).catch((err: any) => {
-            return Promise.reject(new InsightError());
-        });
+        return this.roomDataHandler.getRoomsContentForBuildings(buildings, this.zip);
     }
 
     public checkFolder(zipData: JSZip, kind: InsightDatasetKind): Promise<any> {
@@ -302,107 +116,15 @@ export default class DataHandler {
     }
 
     public loadAllFilesToAllPromises(zipData: JSZip): Promise<string[]> {
-        let allFiles: string[] = [];
-        zipData.folder(this.folder).forEach((relativePath, file) => {
-            allFiles.push(file.name);
-        });
-        let allPromises: any[] = allFiles.map((fileDir: string) => {
-            return zipData.file(fileDir).async("text");
-        });
-        return Promise.all(allPromises);
+        return this.courseDataHandler.loadAllFilesToAllPromises(zipData);
     }
 
     public parseCourseJSON(contents: string[]): Promise<string[]> {
-        let temp: any[] = [];
-        for (let course of contents) {
-            try {
-                temp.push(JSON.parse(course));
-            } catch (e) {
-                continue;
-            }
-        }
-        return Promise.resolve(temp);
+        return this.courseDataHandler.parseCourseJSON(contents);
     }
 
     public getAllSections(allCourses: any[], id: string): Promise<any> {
-        let allSections: any[] = [];
-        for (let course of allCourses) {
-            let sections: any[] = course.result;
-            for (let section of sections) {
-                if (this.isValidSection(section)) {
-                    section.id = section.id.toString();
-                    if (typeof section.Section !== "undefined"
-                        && section.Section.toLowerCase() === "overall") {
-                        section.Year = 1900;
-                    }
-                    section.Year = Number(section.Year);
-                    if (!isNaN(section.Year)) {
-                        section = this.convertSection(section, id);
-                        allSections.push(section);
-                    }
-                }
-            }
-        }
-        this.sectionCounter = allSections.length;
-        if (allSections.length === 0) {
-            return Promise.reject(new InsightError());
-        } else {
-            return Promise.resolve(allSections);
-        }
-    }
-
-    private convertSection(section: any, id: string): any {
-        let newSection: any = {};
-        for (let key of Object.keys(section)) {
-            switch (key) {
-                case "Subject":
-                    newSection[id + "_" + "dept"] = section[key];
-                    continue;
-                case "Course":
-                    newSection[id + "_" + "id"] = section[key];
-                    continue;
-                case "Avg":
-                    newSection[id + "_" + "avg"] = section[key];
-                    continue;
-                case "Professor":
-                    newSection[id + "_" + "instructor"] = section[key];
-                    continue;
-                case "Title":
-                    newSection[id + "_" + "title"] = section[key];
-                    continue;
-                case "Pass":
-                    newSection[id + "_" + "pass"] = section[key];
-                    continue;
-                case "Fail":
-                    newSection[id + "_" + "fail"] = section[key];
-                    continue;
-                case "Audit":
-                    newSection[id + "_" + "audit"] = section[key];
-                    continue;
-                case "id":
-                    newSection[id + "_" + "uuid"] = section[key];
-                    continue;
-                case "Year":
-                    newSection[id + "_" + "year"] = section[key];
-                    continue;
-                default:
-                    continue;
-            }
-        }
-        return newSection;
-    }
-
-    private isValidSection(section: any): boolean {
-        return (typeof section.Subject === "string"
-            && typeof section.Course === "string"
-            && typeof section.Avg === "number"
-            && typeof section.Professor === "string"
-            && typeof section.Title === "string"
-            && typeof section.Pass === "number"
-            && typeof section.Fail === "number"
-            && typeof section.Audit === "number"
-            && typeof section.id === "number"
-            && typeof section.Year === "string");
+        return this.courseDataHandler.getAllSections(allCourses, id);
     }
 
     private checkDir() {
