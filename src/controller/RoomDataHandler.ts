@@ -28,7 +28,7 @@ export default class RoomDataHandler {
                 let building: any = this.makeBuilding(tr);
                 if (typeof building["path"] !== "undefined"
                     && zip.file(building["path"].replace(".", "rooms")) !== null) {
-                    buildingResult.push(this.makeBuilding(tr));
+                    buildingResult.push(building);
                 }
             } catch (err) {
                 continue;

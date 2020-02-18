@@ -423,6 +423,45 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("Should add two valid dataset with different ids, one course one room", function () {
+        const id1: string = "courses";
+        const id2: string = "rooms";
+        const expected1: string[] = [id1];
+        const expected2: string[] = [id1, id2];
+        const expected3: InsightDataset[] = [{
+            id: "courses",
+            kind: InsightDatasetKind.Courses,
+            numRows: 64612
+        }];
+        const expected4: InsightDataset[] = [{
+            id: "courses",
+            kind: InsightDatasetKind.Courses,
+            numRows: 64612
+        }, {
+            id: "rooms",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 364
+        }];
+        return insightFacade.addDataset(id1, datasets[id1], InsightDatasetKind.Courses).then(
+            (result: string[]) => {
+                expect(result).to.deep.equal(expected1);
+            }).catch((err: any) => {
+            expect.fail(err, expected1, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected3);
+            return insightFacade.addDataset(id2, datasets[id2], InsightDatasetKind.Rooms);
+        }).then((result: string[]) => {
+            expect(result).to.deep.equal(expected2);
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected4);
+        }).catch((err: any) => {
+            expect.fail(err, expected2, "Should not have rejected");
+        });
+    });
+
     it("should not add dataset with duplicate ids", function () {
         const id: string = "test4";
         const expected: string[] = [id];
