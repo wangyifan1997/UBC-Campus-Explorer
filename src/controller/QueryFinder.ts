@@ -1,7 +1,7 @@
 import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError, ResultTooLargeError} from "./IInsightFacade";
-import DataHandler from "./DataHandler";
+import {Decimal} from "decimal.js";
 
-export default class QueryValidator {
+export default class QueryFinder {
     private idInQuery: string;
     private allDataset: any;
 
@@ -11,48 +11,132 @@ export default class QueryValidator {
     }
 
     public findMatchingSections(q: any): Promise<any[]> {
-        try {
-            let los: any[] = this.findMatchingWhere(q.WHERE);
-            if (los.length > 5000) {
-                return Promise.reject(new ResultTooLargeError());
-            } else {
-                return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
+        let los: any[] = this.findMatchingWhere(q.WHERE);
+        if (typeof q.TRANSFORMATIONS !== "undefined") {
+            los = this.findTransformations(q.TRANSFORMATIONS, los);
+        }
+        if (los.length > 5000) {
+            return Promise.reject(new ResultTooLargeError());
+        } else {
+            return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
+        }
+    }
+
+    private findTransformations(q: any, los: any[]): any[] {
+        let temp: any = {};
+        let group: any[] = q.GROUP;
+        let apply: any[] = q.APPLY;
+        for (let section of los) {
+            let marker: string = ""; // marker is the combined string of all the corresponding values in group keys
+            for (let key of group) {
+                marker += section[key];
             }
-        } catch (e) {
-            return Promise.reject(e);
+            if (!temp[marker]) {
+                temp[marker] = [section];
+            } else {
+                temp[marker].push(section);
+            }
+        }
+        return this.findAPPLY(group, apply, temp);
+    }
+
+    private findAPPLY(group: any[], apply: any[], temp: any[]): any[] {
+        let result: any[] = [];
+        for (let cluster of Object.values(temp)) {
+            let grouped: any = {};
+            for (let key of group) {
+                grouped[key] = cluster[0][key];
+            }
+            for (let applyRule of apply) {
+                let applyKey: string = Object.keys(applyRule)[0];
+                let applyToken: string = Object.keys(applyRule[applyKey])[0];
+                let k: string = applyRule[applyKey][applyToken];
+                this.findToken(applyKey, applyToken, k, grouped, cluster);
+            }
+            result.push(grouped);
+        }
+        return result;
+    }
+
+    private findToken(applyKey: string, applyToken: string, k: string, grouped: any, cluster: any[]) {
+        switch (applyToken) {
+            case "MAX":
+                let numMax: number[] = [];
+                for (let section of cluster) {
+                    numMax.push(section[k]);
+                }
+                grouped[applyKey] = Math.max.apply(null, numMax);
+                break;
+            case "MIN":
+                let numMin: number[] = [];
+                for (let section of cluster) {
+                    numMin.push(section[k]);
+                }
+                grouped[applyKey] = Math.min.apply(null, numMin);
+                break;
+            case "AVG":
+                let total: Decimal = new Decimal(0);
+                for (let section of cluster) {
+                    total = total.plus(new Decimal(section[k]));
+                }
+                grouped[applyKey] = Number((total.toNumber() / cluster.length).toFixed(2));
+                break;
+            case "COUNT":
+                let set: Set<any> = new Set<any>();
+                for (let section of cluster) {
+                    set.add(section[k]);
+                }
+                grouped[applyKey] = set.size;
+                break;
+            case "SUM":
+                let sum: number = 0;
+                for (let section of cluster) {
+                    sum += section[k];
+                }
+                grouped[applyKey] = Number(sum.toFixed(2));
+                break;
         }
     }
 
     private findMatchingOPTIONS(q: any, los: any[]): any[] {
-        try {
-            let columns: string[] = q.COLUMNS;
-            let final: any[] = [];
-            let processedSection: { [key: string]: any };
-            for (let section of los) {
-                processedSection = {};
-                for (let column of columns) {
-                    let data: any = section[this.fieldConverter(column.split("_")[1])];
-                    processedSection[column] = data;
-                }
-                final.push(processedSection);
+        let columns: string[] = q.COLUMNS;
+        let final: any[] = [];
+        let processedSection: { [key: string]: any };
+        for (let section of los) {
+            processedSection = {};
+            for (let column of columns) {
+                processedSection[column] = section[column];
             }
-            let orderKey: string = q.ORDER;
-            final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
-            return final;
-        } catch (e) {
-            throw new InsightError("error in options");
+            final.push(processedSection);
         }
+        let orderKey: any = q.ORDER;
+        if (typeof orderKey === "string") {
+            final.sort((a, b) => a[orderKey] < b[orderKey] ? -1 : a[orderKey] > b[orderKey] ? 1 : 0);
+        } else if (typeof orderKey === "object") {
+            let keys: string[] = orderKey["keys"];
+            final.sort((a, b) => {
+                for (let key of keys) {
+                    if (a[key] === b[key]) {
+                        continue;
+                    } else {
+                        if (orderKey["dir"] === "UP") {
+                            return a[key] < b[key] ? -1 : 1;
+                        } else {
+                            return a[key] < b[key] ? 1 : -1;
+                        }
+                    }
+                }
+                return 0;
+            });
+        }
+        return final;
     }
 
     private findMatchingWhere(q: any): any[] {
-        try {
-            if (Object.keys(q).length === 0) {
-                return this.allDataset[this.idInQuery];
-            } else {
-                return this.findMatchingFilter(q);
-            }
-        } catch (e) {
-            throw new InsightError("error in where");
+        if (Object.keys(q).length === 0) {
+            return this.allDataset[this.idInQuery]["data"];
+        } else {
+            return this.findMatchingFilter(q);
         }
     }
 
@@ -76,11 +160,10 @@ export default class QueryValidator {
                     for (let section of this.findMatchingFilter(innerObject)) {
                         allORReturns.add(section);
                     }
-                    // allORReturns.add(new Set(this.findMatchingFilter(innerObject)));
                 }
                 return Array.from(allORReturns.values());
             case "NOT":
-                let allSections: any[] = this.allDataset[this.idInQuery];
+                let allSections: any[] = this.allDataset[this.idInQuery]["data"];
                 let currSections = this.findMatchingFilter(value);
                 let result: any[] = [];
                 for (let sections of allSections) {
@@ -106,27 +189,25 @@ export default class QueryValidator {
         let result: any[] = [];
         let mkey: string = Object.keys(value)[0];
         let num: any = Object.values(value)[0];
-        let mfield: string = mkey.split("_")[1];
-        let allSections: any[] = this.allDataset[this.idInQuery];
-        mfield = this.fieldConverter(mfield);
+        let allSections: any[] = this.allDataset[this.idInQuery]["data"];
         switch (type) {
             case "GT":
                 for (let section of allSections) {
-                    if (section[mfield] > num) {
+                    if (section[mkey] > num) {
                         result.push(section);
                     }
                 }
                 return result;
             case "LT":
                 for (let section of allSections) {
-                    if (section[mfield] < num) {
+                    if (section[mkey] < num) {
                         result.push(section);
                     }
                 }
                 return result;
             case "EQ":
                 for (let section of allSections) {
-                    if (section[mfield] === num) {
+                    if (section[mkey] === num) {
                         result.push(section);
                     }
                 }
@@ -141,70 +222,33 @@ export default class QueryValidator {
         let result: any[] = [];
         let skey: string = Object.keys(value)[0];
         let str: any = Object.values(value)[0];
-        let sfield: string = skey.split("_")[1];
-        let allSections: any[] = this.allDataset[this.idInQuery];
-        sfield = this.fieldConverter(sfield);
+        let allSections: any[] = this.allDataset[this.idInQuery]["data"];
         if (str.slice(0, 1) === "*" && str.slice(-1) === "*") {
             for (let section of allSections) {
-                if (section[sfield].includes(str.slice(1, -1))) {
+                if (section[skey].includes(str.slice(1, -1))) {
                     result.push(section);
                 }
             }
         } else if (str.slice(0, 1) === "*") {
             for (let section of allSections) {
-                if (section[sfield].endsWith(str.slice(1, ))) {
+                if (section[skey].endsWith(str.slice(1, ))) {
                     result.push(section);
                 }
             }
         } else if (str.slice(-1) === "*") {
             for (let section of allSections) {
-                if (section[sfield].startsWith(str.slice(0, -1))) {
+                if (section[skey].startsWith(str.slice(0, -1))) {
                     result.push(section);
                 }
             }
         } else {
             for (let section of allSections) {
-                if (section[sfield] === str) {
+                if (section[skey] === str) {
                     result.push(section);
                 }
             }
         }
         return result;
-    }
-
-    private fieldConverter(field: string): string {
-        switch (field) {
-            case "dept":
-                return "Subject";
-            case "id":
-                return "Course";
-            case "avg":
-                return "Avg";
-            case "instructor":
-                return "Professor";
-            case "title":
-                return "Title";
-            case "pass":
-                return "Pass";
-            case "fail":
-                return "Fail";
-            case "audit":
-                return "Audit";
-            case "uuid":
-                return "id";
-            case "year":
-                return "Year";
-            default:
-                return undefined;
-        }
-    }
-
-    public getIdInQuery(): string {
-        return this.idInQuery;
-    }
-
-    public getAllDataset(): string[] {
-        return this.allDataset;
     }
 
     public setAllDataset(data: any) {

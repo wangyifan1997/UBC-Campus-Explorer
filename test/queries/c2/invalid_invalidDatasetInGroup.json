@@ -1,0 +1,30 @@
+{
+    "title": "APPLYTOKEN mismatch",
+    "query":{
+      "WHERE": {
+        "GT": {
+          "courses_avg": 96
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_title",
+          "overallAvg"
+        ]
+      },
+      "TRANSFORMATIONS": {
+        "GROUP": [
+          "abc_title"
+        ],
+        "APPLY": [
+          {
+            "overallAvg": {
+              "AVG": "courses_instructor"
+            }
+          }
+        ]
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

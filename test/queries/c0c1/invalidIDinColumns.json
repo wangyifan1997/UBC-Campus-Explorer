@@ -1,0 +1,19 @@
+{
+    "title": "invalid id in colunms",
+    "query": {
+      "WHERE": {
+        "GT": {
+          "courses_avg": 97
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "cour_instructor",
+          "courses_avg"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

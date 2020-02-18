@@ -1,6 +1,12 @@
 import Log from "../Util";
-import {IInsightFacade, InsightDataset, InsightDatasetKind, ResultTooLargeError} from "./IInsightFacade";
-import {InsightError, NotFoundError} from "./IInsightFacade";
+import {
+    IInsightFacade,
+    InsightDataset,
+    InsightDatasetKind,
+    InsightError,
+    NotFoundError,
+    ResultTooLargeError
+} from "./IInsightFacade";
 import * as JSZip from "jszip";
 import DataHandler from "./DataHandler";
 import QueryValidator from "./QueryValidator";
@@ -28,22 +34,56 @@ export default class InsightFacade implements IInsightFacade {
     }
 
     public addDataset(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
+        if (kind === InsightDatasetKind.Rooms) {
+            return this.addRooms(id, content, kind);
+        } else {
+            return this.addCourses(id, content, kind);
+        }
+    }
+
+    private addRooms(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
         return this.dataHandler.isIdOkToAdd(id).then(() => {
             return this.dataHandler.myLoadAsync(content);
         }).then((zipData: JSZip) => {
-            return this.dataHandler.checkCoursesFolder(zipData);
+            return this.dataHandler.checkFolder(zipData, kind);
+        }).then((zipData: JSZip) => {
+            return this.dataHandler.getAllBuildings(zipData);
+        }).then((result: string) => {
+            return this.dataHandler.getAllBuildingInIndex(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getLocationForBuildings(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getRoomsContentForBuildings(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getAllRoomsInBuilding(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getAllRooms(result, id);
+        }).then((allSections: any[]) => {
+            return this.dataHandler.myWriteFile(id, allSections, kind);
+        }).then((dataToBeAdd: any[]) => {
+            this.dataHandler.addToDataset(id, kind, dataToBeAdd);
+            return Promise.resolve(Object.keys(this.dataHandler.getAllDataset()));
+        }).catch((err: any) => {
+            return Promise.reject(err);
+        });
+    }
+
+    private addCourses(id: string, content: string, kind: InsightDatasetKind): Promise<string[]> {
+        return this.dataHandler.isIdOkToAdd(id).then(() => {
+            return this.dataHandler.myLoadAsync(content);
+        }).then((zipData: JSZip) => {
+            return this.dataHandler.checkFolder(zipData, kind);
         }).then((zipData: JSZip) => {
             return this.dataHandler.loadAllFilesToAllPromises(zipData);
-        }).then((result: string[]) => {
-            return this.dataHandler.parseCourseJSON(result);
+        }).then((res: string[]) => {
+            return this.dataHandler.parseCourseJSON(res);
         }).then((allCourses: string[]) => {
-            return this.dataHandler.getAllSections(allCourses);
+            return this.dataHandler.getAllSections(allCourses, id);
         }).then((allSections: any[]) => {
-            this.dataHandler.addId(id);
-            return this.dataHandler.myWriteFile(id, allSections);
+            return this.dataHandler.myWriteFile(id, allSections, kind);
         }).then((dataToBeAdd: any[]) => {
-            this.dataHandler.addToDataset(id, dataToBeAdd);
-            return Promise.resolve(this.dataHandler.getAllId());
+            this.dataHandler.addToDataset(id, kind, dataToBeAdd);
+            return Promise.resolve(Object.keys(this.dataHandler.getAllDataset()));
         }).catch((err: any) => {
             return Promise.reject(new InsightError());
         });
@@ -68,22 +108,30 @@ export default class InsightFacade implements IInsightFacade {
                 || typeof query.OPTIONS === "undefined") {
                 return Promise.reject(new InsightError());
             }
-            let keys: any[] = Object.keys(query);
-            for (let key of keys) {
-                if (key !== "OPTIONS" && key !== "WHERE") {
+            for (let key of Object.keys(query)) {
+                if (key !== "OPTIONS" && key !== "WHERE" && key !== "TRANSFORMATIONS") {
                     return Promise.reject(new InsightError());
                 }
             }
-            this.queryValidator.setFieldsInQuery([]);
+            this.queryValidator.setKeysInQuery([]);
             this.queryValidator.setIdInQuery([]);
-            this.queryValidator.setAllId(this.dataHandler.getAllId());
-            if (this.queryValidator.validateWhere(query.WHERE) && this.queryValidator.validateOptions(query.OPTIONS)) {
-                this.queryfinder.setAllDataset(this.dataHandler.getAllDataset());
-                this.queryfinder.setidInQuery(this.queryValidator.getIdInQuery()[0]);
-                return this.queryfinder.findMatchingSections(query);
+            this.queryValidator.setTransformationKey([]);
+            this.queryValidator.setAllInsightDataset(this.dataHandler.getAllInsightDataset());
+            if (typeof query.TRANSFORMATIONS !== "undefined") {
+                if (!(this.queryValidator.validateWhere(query.WHERE)
+                    && this.queryValidator.validateTransformations(query.TRANSFORMATIONS)
+                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                    return Promise.reject(new InsightError());
+                }
             } else {
-                return Promise.reject(new InsightError());
+                if (!(this.queryValidator.validateWhere(query.WHERE)
+                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                    return Promise.reject(new InsightError());
+                }
             }
+            this.queryfinder.setAllDataset(this.dataHandler.getAllDataset());
+            this.queryfinder.setidInQuery(this.queryValidator.getIdInQuery()[0]);
+            return this.queryfinder.findMatchingSections(query);
         } catch (err) {
             if (!(err instanceof InsightError) && !(err instanceof ResultTooLargeError)) {
                 return Promise.reject(new InsightError());

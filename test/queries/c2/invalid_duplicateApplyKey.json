@@ -1,0 +1,30 @@
+{
+    "title": "duplicate applykey",
+    "query":{
+      "WHERE": {},
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_title",
+          "overallAvg"
+        ]
+      },
+      "TRANSFORMATIONS": {
+        "GROUP": [
+          "courses_title"
+        ],
+        "APPLY": [
+          {
+            "overallAvg": {
+              "AVG": "courses_avg"
+            }
+          },
+          {
+            "overallAvg": {
+              "AVG": "courses_avg"
+            }
+          }
+        ]
+      }},
+    "isQueryValid": false,
+    "result": "InsightError"
+}

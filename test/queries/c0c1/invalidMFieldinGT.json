@@ -1,0 +1,19 @@
+{
+    "title": "invalid key in GT, key is not existant at all",
+    "query": {
+      "WHERE": {
+        "GT": {
+          "courses_cdef": 97
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_id",
+          "courses_avg"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

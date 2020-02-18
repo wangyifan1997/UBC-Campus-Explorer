@@ -1,0 +1,19 @@
+{
+    "title": "SELECT dept, avg FROM notexist WHERE avg > 97",
+    "query": {
+      "WHERE": {
+        "GT": {
+          "notexist_avg": 97
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "notexist_dept",
+          "notexist_avg"
+        ],
+        "ORDER": "notexist_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

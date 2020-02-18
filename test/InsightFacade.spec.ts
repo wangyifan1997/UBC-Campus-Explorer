@@ -44,7 +44,7 @@ describe("Test helper methods", () => {
         "\"tier_fifty_five\":1,\"tier_eighty\":17,\"tier_sixty\":7,\"tier_ten\":0,\"High\":99,\"Course\":\"160\"," +
         "\"Session\":\"s\",\"Pass\":87,\"Fail\":2,\"Avg\":80.42,\"Campus\":\"ubc\",\"Subject\":\"apsc\"}]}"];
         return dataHandler.parseCourseJSON(course1).then((result: string[]) => {
-            return dataHandler.getAllSections(result);
+            return dataHandler.getAllSections(result, "courses");
         }).catch((err: any) => {
             expect.fail("should not have rejected");
         }).then((allSections: any[]) => {
@@ -118,7 +118,12 @@ describe("InsightFacade Add/Remove Dataset", function () {
         zipWithCoursesFolderButInvalidFiles: "./test/data/zipWithCoursesFolderButInvalidFiles.zip",
         zipWithOneSection: "./test/data/zipWithOneSection.zip",
         zipWithZeroValidSection: "./test/data/zipWithZeroValidSection.zip",
-        zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip"
+        zipWithMixedFiles: "./test/data/zipWithMixedFiles.zip",
+        rooms: "./test/data/rooms.zip",
+        emptyRooms: "./test/data/emptyRooms.zip",
+        roomsWithoutWOOD: "./test/data/roomsWithoutWOOD.zip",
+        roomsWithoutWOODShortName: "./test/data/roomsWithoutWOODShortName.zip",
+        roomsWithoutWOODAddress: "./test/data/roomsWithoutWOODAddress.zip"
     };
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
@@ -216,6 +221,26 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("Should list a room dataset", () => {
+        const id: string = "rooms";
+        const expected: InsightDataset[] = [{
+            id: "rooms",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 364
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            expect(result).to.deep.equal(["rooms"]);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail();
+        });
+    });
+
     // This is a unit test. You should create more like this!
     it("Should add a valid dataset", function () {
         const id: string = "test1";
@@ -224,6 +249,64 @@ describe("InsightFacade Add/Remove Dataset", function () {
             (result: string[]) => {
                 expect(result).to.deep.equal(expected);
             }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset", function () {
+        const id: string = "rooms";
+        const expected: string[] = [id];
+        return insightFacade.addDataset(id, datasets["rooms"], InsightDatasetKind.Rooms).then((result: string[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset without WOOD", function () {
+        const id: string = "roomsWithoutWOOD";
+        const expected: InsightDataset[] = [{
+            id: "roomsWithoutWOOD",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 348
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset without WOOD shortname", function () {
+        const id: string = "roomsWithoutWOODShortName";
+        const expected: InsightDataset[] = [{
+            id: "roomsWithoutWOODShortName",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 348
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
+            expect.fail(err, expected, "Should not have rejected");
+        });
+    });
+
+    it("Should add a valid room dataset with WOOD address being undefined", function () {
+        const id: string = "roomsWithoutWOODAddress";
+        const expected: InsightDataset[] = [{
+            id: "roomsWithoutWOODAddress",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 348
+        }];
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected);
+        }).catch((err: any) => {
             expect.fail(err, expected, "Should not have rejected");
         });
     });
@@ -260,6 +343,15 @@ describe("InsightFacade Add/Remove Dataset", function () {
     it("Should not add an empty zip with no folders", function () {
         const id: string = "emptyZipWithNoFolder";
         return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Courses).then((result: string[]) => {
+            expect.fail();
+        }).catch((err: any) => {
+            expect(err).to.be.instanceOf(InsightError);
+        });
+    });
+
+    it("Should not add an empty room zip", function () {
+        const id: string = "emptyRooms";
+        return insightFacade.addDataset(id, datasets[id], InsightDatasetKind.Rooms).then((result: string[]) => {
             expect.fail();
         }).catch((err: any) => {
             expect(err).to.be.instanceOf(InsightError);
@@ -484,6 +576,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
 describe("InsightFacade PerformQuery", () => {
     const datasetsToQuery: { [id: string]: { path: string, kind: InsightDatasetKind } } = {
         courses: {path: "./test/data/courses.zip", kind: InsightDatasetKind.Courses},
+        rooms: {path: "./test/data/rooms.zip", kind: InsightDatasetKind.Rooms},
     };
     let insightFacade: InsightFacade;
     let testQueries: ITestQuery[] = [];
@@ -531,17 +624,31 @@ describe("InsightFacade PerformQuery", () => {
         Log.test(`AfterTest: ${this.currentTest.title}`);
     });
 
-    // Dynamically create and run a test for each query in testQueries
-    // Creates an extra "test" called "Should run test queries" as a byproduct. Don't worry about it
+    // // Dynamically create and run a test for each query in testQueries
+    // // Creates an extra "test" called "Should run test queries" as a byproduct. Don't worry about it
+    // it("Should run test queries", function () {
+    //     describe("Dynamic InsightFacade PerformQuery tests", function () {
+    //         for (const test of testQueries) {
+    //             it(`[${test.filename}] ${test.title}`, function (done) {
+    //                 insightFacade.performQuery(test.query).then((result) => {
+    //                     TestUtil.checkQueryResult(test, result, done);
+    //                 }).catch((err) => {
+    //                     TestUtil.checkQueryResult(test, err, done);
+    //                 });
+    //             });
+    //         }
+    //     });
+    // });
+    // Dynamically create and run a test for each query in testQueries.
+    // Creates an extra "test" called "Should run test queries" as a byproduct.
     it("Should run test queries", function () {
         describe("Dynamic InsightFacade PerformQuery tests", function () {
             for (const test of testQueries) {
                 it(`[${test.filename}] ${test.title}`, function (done) {
-                    insightFacade.performQuery(test.query).then((result) => {
-                        TestUtil.checkQueryResult(test, result, done);
-                    }).catch((err) => {
-                        TestUtil.checkQueryResult(test, err, done);
-                    });
+                    const resultChecker = TestUtil.getQueryChecker(test, done);
+                    insightFacade.performQuery(test.query)
+                        .then(resultChecker)
+                        .catch(resultChecker);
                 });
             }
         });

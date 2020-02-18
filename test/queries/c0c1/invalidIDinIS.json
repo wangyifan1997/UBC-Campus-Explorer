@@ -1,0 +1,19 @@
+{
+    "title": "invalid ID in IS",
+    "query": {
+      "WHERE": {
+        "IS": {
+          "cour_instructor": "Paul Carter"
+        }
+      },
+      "OPTIONS": {
+        "COLUMNS": [
+          "courses_id",
+          "courses_avg"
+        ],
+        "ORDER": "courses_avg"
+      }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

@@ -1,0 +1,26 @@
+{
+    "title": "AND must be a non-empty array",
+    "query": {
+        "WHERE": {
+            "NOT": {
+                "OR":{
+                    "LT": {
+                        "courses_avg": 95
+                    },
+                    "GT":{
+                        "courses_avg":97
+                    }
+                }
+            }
+        },
+        "OPTIONS": {
+            "COLUMNS": [
+                "courses_dept",
+                "courses_avg"
+            ],
+            "ORDER": "courses_avg"
+        }
+    },
+    "isQueryValid": false,
+    "result": "InsightError"
+}

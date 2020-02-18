@@ -1,23 +1,25 @@
-import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
+import {GeoResponse, InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
 import * as JSZip from "jszip";
 import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
+import {type} from "os";
+import RoomDataHandler from "./RoomDataHandler";
+import CourseDataHandler from "./CourseDataHandler";
+
 
 export default class DataHandler {
-    private allId: string[];
-    private allDataset: any;
+    private allDataset: { [index: string]: any };
     private path: string;
-    private folder: string;
-    private allInsightDataset: InsightDataset[];
-    private sectionCounter: number;
+    private zip: JSZip;
+    private roomDataHandler: RoomDataHandler;
+    private courseDataHandler: CourseDataHandler;
 
     constructor() {
-        this.allId = [];
         this.allDataset = {};
         this.path = "./data";
-        this.folder = "courses";
-        this.allInsightDataset = [];
-        this.sectionCounter = 0;
+        this.zip = new JSZip();
+        this.roomDataHandler = new RoomDataHandler();
+        this.courseDataHandler = new CourseDataHandler();
     }
 
     private isIdIllegal(id: string): boolean {
@@ -37,16 +39,16 @@ export default class DataHandler {
         }
     }
 
+    public resetZip(): void {
+        this.zip = new JSZip();
+    }
+
     private isIdAdded(id: string): boolean {
-        return this.allId.includes(id);
+        return Object.keys(this.allDataset).includes(id);
     }
 
     public isIdOkToAdd(id: string): Promise<any> {
-        try {
-            this.readDataset();
-        } catch (e) {
-            return Promise.reject(new InsightError());
-        }
+        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -57,11 +59,7 @@ export default class DataHandler {
     }
 
     public isIdOkToDelete(id: string): Promise<any> {
-        try {
-            this.readDataset();
-        } catch (e) {
-            return Promise.reject(new InsightError());
-        }
+        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -73,81 +71,60 @@ export default class DataHandler {
 
     public myLoadAsync(content: string) {
         try {
-            let zip: JSZip = new JSZip();
-            return zip.loadAsync(content, {base64: true});
+            this.resetZip();
+            return this.zip.loadAsync(content, {base64: true});
         } catch (e) {
             return Promise.reject(new InsightError());
         }
     }
 
-    public checkCoursesFolder(zipData: JSZip): Promise<any> {
-        let coursesFolder: JSZipObject[] = zipData.folder(/courses/);
-        if (coursesFolder.length === 0) {
-            return Promise.reject(InsightError);
+    public getAllBuildings(zipData: JSZip): Promise<any> {
+        return this.roomDataHandler.getAllBuildings(zipData);
+    }
+
+    public getAllBuildingInIndex(content: string): Promise<any> {
+        return this.roomDataHandler.getAllBuildingInIndex(content, this.zip);
+    }
+
+    public getAllRoomsInBuilding(buildings: any[]): Promise<any> {
+        return this.roomDataHandler.getAllRoomsInBuilding(buildings);
+    }
+
+    public getAllRooms(buildings: any[], id: string): Promise<any> {
+        return this.roomDataHandler.getAllRooms(buildings, id);
+    }
+
+    public getLocationForBuildings(buildings: any[]): Promise<any[]> {
+        return this.roomDataHandler.getLocationForBuildings(buildings);
+    }
+
+    public getRoomsContentForBuildings(buildings: any[]): Promise<any> {
+        return this.roomDataHandler.getRoomsContentForBuildings(buildings, this.zip);
+    }
+
+    public checkFolder(zipData: JSZip, kind: InsightDatasetKind): Promise<any> {
+        let folder: JSZipObject[];
+        if (kind === InsightDatasetKind.Courses) {
+            folder = zipData.folder(/courses/);
+        } else if (kind === InsightDatasetKind.Rooms) {
+            folder = zipData.folder(/rooms/);
+        }
+        if (folder.length === 0) {
+            return Promise.reject(new InsightError());
         }
         return Promise.resolve(zipData);
     }
 
     public loadAllFilesToAllPromises(zipData: JSZip): Promise<string[]> {
-        let allFiles: string[] = [];
-        zipData.folder(this.folder).forEach((relativePath, file) => {
-            allFiles.push(file.name);
-        });
-        let allPromises: any[] = allFiles.map((fileDir: string) => {
-            return zipData.file(fileDir).async("text");
-        });
-        return Promise.all(allPromises);
+        return this.courseDataHandler.loadAllFilesToAllPromises(zipData);
     }
 
     public parseCourseJSON(contents: string[]): Promise<string[]> {
-        let temp: any[] = [];
-        for (let course of contents) {
-            try {
-                temp.push(JSON.parse(course));
-            } catch (e) {
-                continue;
-            }
-        }
-        return Promise.resolve(temp);
+        return this.courseDataHandler.parseCourseJSON(contents);
     }
 
-    public getAllSections(allCourses: any[]): Promise<any> {
-        let allSections: any[] = [];
-        for (let course of allCourses) {
-            let sections: any[] = course.result;
-            for (let section of sections) {
-                if (this.isValidSection(section)) {
-                    section.id = section.id.toString();
-                    if (typeof section.Section !== "undefined"
-                        && section.Section.toLowerCase() === "overall") {
-                        section.Year = 1900;
-                    }
-                    section.Year = Number(section.Year);
-                    if (!isNaN(section.Year)) {
-                        allSections.push(section);
-                    }
-                }
-            }
-        }
-        this.sectionCounter = allSections.length;
-        if (allSections.length === 0) {
-            return Promise.reject(new InsightError());
-        } else {
-            return Promise.resolve(allSections);
-        }
-    }
-
-    private isValidSection(section: any): boolean {
-        return (typeof section.Subject === "string"
-            && typeof section.Course === "string"
-            && typeof section.Avg === "number"
-            && typeof section.Professor === "string"
-            && typeof section.Title === "string"
-            && typeof section.Pass === "number"
-            && typeof section.Fail === "number"
-            && typeof section.Audit === "number"
-            && typeof section.id === "number"
-            && typeof section.Year === "string");
+    public getAllSections(allCourses: any[], id: string): Promise<any> {
+        return this.courseDataHandler.getAllSections(allCourses, id);
     }
 
     private checkDir() {
@@ -156,9 +133,9 @@ export default class DataHandler {
         }
     }
 
-    public myWriteFile(id: string, allSections: any[]): Promise<any> {
+    public myWriteFile(id: string, allSections: any[], kind: InsightDatasetKind): Promise<any> {
         this.checkDir();
-        let data: any = this.createDataToBeAdd(id, allSections);
+        let data: any = this.createDataToBeAdd(id, allSections, kind);
         try {
             fs.writeFileSync(this.path + "/" + id, JSON.stringify(data));
         } catch (e) {
@@ -179,12 +156,10 @@ export default class DataHandler {
 
     public readDataset() {
         this.checkDir();
-        this.allId = this.myReadEntryNames(this.path);
-        for (let id of this.allId) {
+        for (let id of this.myReadEntryNames(this.path)) {
             let writtenFile: any = this.myReadFile(this.path + "/" + id);
             writtenFile = JSON.parse(writtenFile);
-            let sections: any[] = writtenFile[id];
-            this.allDataset[id] = sections;
+            this.allDataset[id] = writtenFile;
         }
     }
 
@@ -200,66 +175,41 @@ export default class DataHandler {
         try {
             fs.unlinkSync(this.path + "/" + id);
             this.removeFromDataset(id);
-            this.removeId(id);
         } catch (e) {
             throw new InsightError();
         }
     }
 
-    private createDataToBeAdd(id: string, allSections: any[]): any {
-        let dataToBeAdd: { [id: string]: any } = {};
-        dataToBeAdd[id] = allSections;
+    private createDataToBeAdd(id: string, allSections: any[], kind: InsightDatasetKind): any {
+        let dataToBeAdd: any = {};
+        dataToBeAdd["data"] = allSections;
+        dataToBeAdd["id"] = id;
+        dataToBeAdd["kind"] = kind;
         return dataToBeAdd;
     }
 
-    public addId(id: string) {
-        this.allId.push(id);
-    }
-
-    private removeId(id: string) {
-        for (let i: number = 0; i < this.allId.length; i++) {
-            if (this.allId[i] === id) {
-                this.allId.splice(++i, 1);
-                return;
-            }
-        }
-    }
-
-    private addInsightDataset(id: string) {
-        let data: InsightDataset = {id: id, kind: InsightDatasetKind.Courses, numRows: this.sectionCounter};
-        this.allInsightDataset.push(data);
-    }
-
-    private removeInsightDataset(id: string) {
-        for (let i: number = 0; i < this.allInsightDataset.length; i++) {
-            if (this.allInsightDataset[i].id === id) {
-                this.allInsightDataset.splice(++i, 1);
-                return;
-            }
-        }
-    }
-
-    public addToDataset(id: string, dataToBeAdd: { [id: string]: any }) {
-        this.allDataset[id] = dataToBeAdd[id];
-        this.addInsightDataset(id);
+    public addToDataset(id: string, kind: InsightDatasetKind, dataToBeAdd: { [id: string]: any }) {
+        this.allDataset[id] = dataToBeAdd;
     }
 
     private removeFromDataset(id: string) {
         delete this.allDataset[id];
-        this.removeInsightDataset(id);
-    }
-
-    public getAllId(): string[] {
-        return this.allId;
     }
 
     public getAllDataset(): any {
-        this.readDataset();
         return this.allDataset;
     }
 
-    public getAllInsightDataset(): InsightDataset[] {
-        this.readDataset();
-        return this.allInsightDataset;
+    public getAllInsightDataset(): any {
+        let allInsightDataset: InsightDataset[] = [];
+        for (let dataset of Object.values(this.allDataset)) {
+            let id: string = dataset["id"];
+            let kind: InsightDatasetKind = dataset["kind"];
+            let numRows: number = dataset["data"].length;
+            let insightDataset: InsightDataset
+                = {id: id, kind: kind, numRows: numRows};
+            allInsightDataset.push(insightDataset);
+        }
+        return allInsightDataset;
     }
 }
