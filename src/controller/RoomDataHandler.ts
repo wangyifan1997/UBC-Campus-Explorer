@@ -165,6 +165,7 @@ export default class RoomDataHandler {
         return newRoom;
     }
 
+    // Changed
     public getLocationForBuildings(buildings: any[]): Promise<any[]> {
         let allPromises: any[] = buildings.map((building: any) => {
             return this.getLocationForOneBuilding(building);

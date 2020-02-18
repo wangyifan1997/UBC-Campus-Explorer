@@ -128,7 +128,6 @@ describe("InsightFacade Add/Remove Dataset", function () {
     let datasets: { [id: string]: string } = {};
     let insightFacade: InsightFacade;
     const cacheDir = __dirname + "/../data";
-    // randomly changing something
     before(function () {
         // This section runs once and loads all datasets specified in the datasetsToLoad object
         // into the datasets object
@@ -462,6 +461,44 @@ describe("InsightFacade Add/Remove Dataset", function () {
         });
     });
 
+    it("Should add two valid dataset with different ids, one room one course", function () {
+        const id1: string = "rooms";
+        const id2: string = "courses";
+        const expected1: string[] = [id1];
+        const expected2: string[] = [id1, id2];
+        const expected3: InsightDataset[] = [{
+            id: "rooms",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 364
+        }];
+        const expected4: InsightDataset[] = [{
+            id: "rooms",
+            kind: InsightDatasetKind.Rooms,
+            numRows: 364
+        }, {
+            id: "courses",
+            kind: InsightDatasetKind.Courses,
+            numRows: 64612
+        }];
+        return insightFacade.addDataset(id1, datasets[id1], InsightDatasetKind.Rooms).then((result: string[]) => {
+            expect(result).to.deep.equal(expected1);
+        }).catch((err: any) => {
+            expect.fail(err, expected1, "Should not have rejected");
+        }).then(() => {
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected3);
+            return insightFacade.addDataset(id2, datasets[id2], InsightDatasetKind.Courses);
+        }).then((result: string[]) => {
+            expect(result).to.deep.equal(expected2);
+            return insightFacade.listDatasets();
+        }).then((result: InsightDataset[]) => {
+            expect(result).to.deep.equal(expected4);
+        }).catch((err: any) => {
+            expect.fail(err, expected2, "Should not have rejected");
+        });
+    });
+
     it("should not add dataset with duplicate ids", function () {
         const id: string = "test4";
         const expected: string[] = [id];
@@ -615,7 +652,7 @@ describe("InsightFacade Add/Remove Dataset", function () {
 describe("InsightFacade PerformQuery", () => {
     const datasetsToQuery: { [id: string]: { path: string, kind: InsightDatasetKind } } = {
         courses: {path: "./test/data/courses.zip", kind: InsightDatasetKind.Courses},
-        rooms: {path: "./test/data/rooms.zip", kind: InsightDatasetKind.Rooms},
+        rooms: {path: "./test/data/rooms.zip", kind: InsightDatasetKind.Rooms}
     };
     let insightFacade: InsightFacade;
     let testQueries: ITestQuery[] = [];
@@ -642,13 +679,6 @@ describe("InsightFacade PerformQuery", () => {
             loadDatasetPromises.push(insightFacade.addDataset(id, data, ds.kind));
         }
         return Promise.all(loadDatasetPromises);
-        //     .catch((err) => {
-        //     /* *IMPORTANT NOTE: This catch is to let this run even without the implemented addDataset,
-        //      * for the purposes of seeing all your tests run.
-        //      * TODO For C1, remove this catch block (but keep the Promise.all)
-        //      */
-        //     return Promise.resolve("HACK TO LET QUERIES RUN");
-        // });
     });
 
     beforeEach(function () {
@@ -663,21 +693,6 @@ describe("InsightFacade PerformQuery", () => {
         Log.test(`AfterTest: ${this.currentTest.title}`);
     });
 
-    // // Dynamically create and run a test for each query in testQueries
-    // // Creates an extra "test" called "Should run test queries" as a byproduct. Don't worry about it
-    // it("Should run test queries", function () {
-    //     describe("Dynamic InsightFacade PerformQuery tests", function () {
-    //         for (const test of testQueries) {
-    //             it(`[${test.filename}] ${test.title}`, function (done) {
-    //                 insightFacade.performQuery(test.query).then((result) => {
-    //                     TestUtil.checkQueryResult(test, result, done);
-    //                 }).catch((err) => {
-    //                     TestUtil.checkQueryResult(test, err, done);
-    //                 });
-    //             });
-    //         }
-    //     });
-    // });
     // Dynamically create and run a test for each query in testQueries.
     // Creates an extra "test" called "Should run test queries" as a byproduct.
     it("Should run test queries", function () {
