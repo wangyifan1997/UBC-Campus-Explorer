@@ -59,7 +59,7 @@ export default class RoomDataHandler {
         let room: any = {};
         for (let element of tr["childNodes"]) {
             if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("room-number")) {
-                room["number"] = element["childNodes"][1]["attrs"][0]["value"];
+                room["number"] = element["childNodes"][1]["childNodes"][0]["value"];
             } else if (element["nodeName"] === "td" && element["attrs"][0]["value"].includes("capacity")) {
                 let seats: string = element["childNodes"][0]["value"].replace(/(\n)/gm, "").trim();
                 if (seats === "") {

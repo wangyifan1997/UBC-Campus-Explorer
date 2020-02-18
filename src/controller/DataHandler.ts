@@ -194,7 +194,6 @@ export default class DataHandler {
 
     private removeFromDataset(id: string) {
         delete this.allDataset[id];
-
     }
 
     public getAllDataset(): any {
