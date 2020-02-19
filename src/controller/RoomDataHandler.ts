@@ -195,9 +195,10 @@ export default class RoomDataHandler {
                     resolve(building);
                 });
             }).on("error", (err: any) => {
-                building["lat"] = undefined;
-                building["lon"] = undefined;
-                resolve(building);
+                // building["lat"] = undefined;
+                // building["lon"] = undefined;
+                // resolve(building);
+                reject(new InsightError("error getting location " + err));
             });
         });
     }
