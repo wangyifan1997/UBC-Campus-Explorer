@@ -47,7 +47,6 @@ export default class DataHandler {
     }
 
     public isIdOkToAdd(id: string): Promise<any> {
-        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -58,7 +57,6 @@ export default class DataHandler {
     }
 
     public isIdOkToDelete(id: string): Promise<any> {
-        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
