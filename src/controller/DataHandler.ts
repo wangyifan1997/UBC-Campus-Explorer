@@ -2,7 +2,6 @@ import {GeoResponse, InsightDataset, InsightDatasetKind, InsightError, NotFoundE
 import * as JSZip from "jszip";
 import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
-import {type} from "os";
 import RoomDataHandler from "./RoomDataHandler";
 import CourseDataHandler from "./CourseDataHandler";
 

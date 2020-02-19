@@ -28,7 +28,7 @@ export default class RoomDataHandler {
                 let building: any = this.makeBuilding(tr);
                 if (typeof building["path"] !== "undefined"
                     && zip.file(building["path"].replace(".", "rooms")) !== null) {
-                    buildingResult.push(this.makeBuilding(tr));
+                    buildingResult.push(building);
                 }
             } catch (err) {
                 continue;
@@ -165,6 +165,7 @@ export default class RoomDataHandler {
         return newRoom;
     }
 
+    // Changed
     public getLocationForBuildings(buildings: any[]): Promise<any[]> {
         let allPromises: any[] = buildings.map((building: any) => {
             return this.getLocationForOneBuilding(building);
@@ -179,8 +180,8 @@ export default class RoomDataHandler {
             building["lon"] = undefined;
             return Promise.resolve(building);
         }
-        let convertedAddress: string = address.replace(" ", "%20");
-        let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + convertedAddress;
+        let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + address;
+        url = encodeURI(url);
         return new Promise((resolve, reject) => {
             this.http.get(url, (res: any) => {
                 let data: string = "";
@@ -194,9 +195,10 @@ export default class RoomDataHandler {
                     resolve(building);
                 });
             }).on("error", (err: any) => {
-                building["lat"] = undefined;
-                building["lon"] = undefined;
-                resolve(building);
+                // building["lat"] = undefined;
+                // building["lon"] = undefined;
+                // resolve(building);
+                reject(new InsightError("error getting location " + err));
             });
         });
     }
