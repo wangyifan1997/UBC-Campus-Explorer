@@ -48,12 +48,12 @@ export default class InsightFacade implements IInsightFacade {
             return this.dataHandler.checkFolder(zipData, kind);
         }).then((zipData: JSZip) => {
             return this.dataHandler.getAllBuildings(zipData);
-        }).then((result: string) => {
+        }).then((result: any[]) => {
             return this.dataHandler.getAllBuildingInIndex(result);
         }).then((result: any[]) => {
-            return this.dataHandler.getLocationForBuildings(result);
-        }).then((result: any[]) => {
             return this.dataHandler.getRoomsContentForBuildings(result);
+        }).then((result: any[]) => {
+            return this.dataHandler.getLocationForBuildings(result);
         }).then((result: any[]) => {
             return this.dataHandler.getAllRoomsInBuilding(result);
         }).then((result: any[]) => {
