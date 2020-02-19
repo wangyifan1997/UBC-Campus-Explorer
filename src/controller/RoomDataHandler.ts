@@ -180,7 +180,7 @@ export default class RoomDataHandler {
             building["lon"] = undefined;
             return Promise.resolve(building);
         }
-        let convertedAddress: string = address.replace(" ", "%20");
+        let convertedAddress: string = this.convertAddress(address);
         let url: string = "http://cs310.students.cs.ubc.ca:11316/api/v1/project_team" + "092/" + convertedAddress;
         return new Promise((resolve, reject) => {
             this.http.get(url, (res: any) => {
@@ -200,6 +200,18 @@ export default class RoomDataHandler {
                 resolve(building);
             });
         });
+    }
+
+    private convertAddress(address: string): string {
+        let converted: string = "";
+        for (let char of address) {
+            if (char === " ") {
+                converted += "%20";
+            } else {
+                converted += char;
+            }
+        }
+        return converted;
     }
 
     public getRoomsContentForBuildings(buildings: any[], zip: JSZip): Promise<any> {
