@@ -212,12 +212,21 @@ export default class RoomDataHandler {
 
 
     private getRoomsContentForOneBuilding(building: any, zip: JSZip): Promise<any> {
+        // let path = building["path"].replace(".", "rooms");
+        // return zip.file(path).async("text").then((content: string) => {
+        //     building["rooms"] = this.parse5.parse(content);
+        //     return Promise.resolve(building);
+        // }).catch((err: any) => {
+        //     return Promise.reject(new InsightError());
+        // });
         let path = building["path"].replace(".", "rooms");
-        return zip.file(path).async("text").then((content: string) => {
-            building["rooms"] = this.parse5.parse(content);
-            return Promise.resolve(building);
-        }).catch((err: any) => {
-            return Promise.reject(new InsightError());
+        return new Promise<any>((resolve, reject) => {
+            return zip.file(path).async("text").then((content: string) => {
+                building["rooms"] = this.parse5.parse(content);
+                resolve(building);
+            }).catch((err: any) => {
+                reject(new InsightError(err));
+            });
         });
     }
 }
