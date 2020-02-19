@@ -11,11 +11,6 @@ export default class RoomDataHandler {
     }
 
     public getAllBuildings(zipData: JSZip): Promise<any> {
-        // try {
-        //     return zipData.file("rooms/index.htm").async("text");
-        // } catch (e) {
-        //     return Promise.reject(new InsightError());
-        // }
         return new Promise<any>((resolve, reject) => {
             return zipData.file("rooms/index.htm").async("text").then((result: string) => {
                 resolve([result, zipData]);
@@ -203,9 +198,6 @@ export default class RoomDataHandler {
                     resolve(building);
                 });
             }).on("error", (err: any) => {
-                // building["lat"] = undefined;
-                // building["lon"] = undefined;
-                // resolve(building);
                 reject(new InsightError(err));
             });
         });
@@ -220,13 +212,6 @@ export default class RoomDataHandler {
 
 
     private getRoomsContentForOneBuilding(building: any, zip: JSZip): Promise<any> {
-        // let path = building["path"].replace(".", "rooms");
-        // return zip.file(path).async("text").then((content: string) => {
-        //     building["rooms"] = this.parse5.parse(content);
-        //     return Promise.resolve(building);
-        // }).catch((err: any) => {
-        //     return Promise.reject(new InsightError());
-        // });
         let path = building["path"].replace(".", "rooms");
         return new Promise<any>((resolve, reject) => {
             return zip.file(path).async("text").then((content: string) => {
