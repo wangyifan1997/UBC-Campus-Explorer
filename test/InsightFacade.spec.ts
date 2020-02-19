@@ -55,54 +55,54 @@ describe("Test helper methods", () => {
     });
 });
 
-describe("multiple InsightFacade add/remove test", function () {
-    const datasetsToLoad: { [id: string]: string } = {
-        courses: "./test/data/courses.zip",
-    };
-    let datasets: { [id: string]: string } = {};
-    let insightFacade1: InsightFacade;
-    let insightFacade2: InsightFacade;
-    const cacheDir = __dirname + "/../data";
-
-    before(function () {
-        // This section runs once and loads all datasets specified in the datasetsToLoad object
-        // into the datasets object
-        Log.test(`Before all`);
-        for (const id of Object.keys(datasetsToLoad)) {
-            datasets[id] = fs.readFileSync(datasetsToLoad[id]).toString("base64");
-        }
-    });
-
-    beforeEach(function () {
-        // This section resets the data directory (removing any cached data) and resets the InsightFacade instance
-        // This runs before each test, which should make each test independent from the previous one
-        Log.test(`BeforeTest: ${this.currentTest.title}`);
-        try {
-            fs.removeSync(cacheDir);
-            fs.mkdirSync(cacheDir);
-            insightFacade1 = new InsightFacade();
-            insightFacade2 = new InsightFacade();
-        } catch (err) {
-            Log.error(err);
-        }
-    });
-
-    it("2 should reject when 1 has added a dataset with same id", function () {
-        const expected: string[] = ["courses"];
-        const dataset: string = datasets["courses"];
-        return insightFacade1.addDataset("courses", dataset, InsightDatasetKind.Courses).then((result: string[]) => {
-            expect(result).to.deep.equal(expected);
-        }).catch((err: any) => {
-            expect.fail();
-        }).then(() => {
-            return insightFacade2.addDataset("courses", dataset, InsightDatasetKind.Courses);
-        }).then(() => {
-            expect.fail();
-        }).catch((err: any) => {
-            expect(err).to.be.instanceOf(InsightError);
-        });
-    });
-});
+// describe("multiple InsightFacade add/remove test", function () {
+//     const datasetsToLoad: { [id: string]: string } = {
+//         courses: "./test/data/courses.zip",
+//     };
+//     let datasets: { [id: string]: string } = {};
+//     let insightFacade1: InsightFacade;
+//     let insightFacade2: InsightFacade;
+//     const cacheDir = __dirname + "/../data";
+//
+//     before(function () {
+//         // This section runs once and loads all datasets specified in the datasetsToLoad object
+//         // into the datasets object
+//         Log.test(`Before all`);
+//         for (const id of Object.keys(datasetsToLoad)) {
+//             datasets[id] = fs.readFileSync(datasetsToLoad[id]).toString("base64");
+//         }
+//     });
+//
+//     beforeEach(function () {
+//         // This section resets the data directory (removing any cached data) and resets the InsightFacade instance
+//         // This runs before each test, which should make each test independent from the previous one
+//         Log.test(`BeforeTest: ${this.currentTest.title}`);
+//         try {
+//             fs.removeSync(cacheDir);
+//             fs.mkdirSync(cacheDir);
+//             insightFacade1 = new InsightFacade();
+//             insightFacade2 = new InsightFacade();
+//         } catch (err) {
+//             Log.error(err);
+//         }
+//     });
+//
+//     it("2 should reject when 1 has added a dataset with same id", function () {
+//         const expected: string[] = ["courses"];
+//         const dataset: string = datasets["courses"];
+//         return insightFacade1.addDataset("courses", dataset, InsightDatasetKind.Courses).then((result: string[]) => {
+//             expect(result).to.deep.equal(expected);
+//         }).catch((err: any) => {
+//             expect.fail();
+//         }).then(() => {
+//             return insightFacade2.addDataset("courses", dataset, InsightDatasetKind.Courses);
+//         }).then(() => {
+//             expect.fail();
+//         }).catch((err: any) => {
+//             expect(err).to.be.instanceOf(InsightError);
+//         });
+//     });
+// });
 
 
 describe("InsightFacade Add/Remove Dataset", function () {

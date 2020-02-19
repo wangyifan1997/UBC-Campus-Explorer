@@ -9,14 +9,14 @@ import CourseDataHandler from "./CourseDataHandler";
 export default class DataHandler {
     private allDataset: { [index: string]: any };
     private path: string;
-    private zip: JSZip;
+    // private zip: JSZip;
     private roomDataHandler: RoomDataHandler;
     private courseDataHandler: CourseDataHandler;
 
     constructor() {
         this.allDataset = {};
         this.path = "./data";
-        this.zip = new JSZip();
+        // this.zip = new JSZip();
         this.roomDataHandler = new RoomDataHandler();
         this.courseDataHandler = new CourseDataHandler();
     }
@@ -38,16 +38,15 @@ export default class DataHandler {
         }
     }
 
-    public resetZip(): void {
-        this.zip = new JSZip();
-    }
+    // public resetZip(): void {
+    //     this.zip = new JSZip();
+    // }
 
     private isIdAdded(id: string): boolean {
         return Object.keys(this.allDataset).includes(id);
     }
 
     public isIdOkToAdd(id: string): Promise<any> {
-        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -58,7 +57,6 @@ export default class DataHandler {
     }
 
     public isIdOkToDelete(id: string): Promise<any> {
-        this.readDataset();
         if (this.isIdIllegal(id)) {
             return Promise.reject(new InsightError());
         }
@@ -70,8 +68,9 @@ export default class DataHandler {
 
     public myLoadAsync(content: string) {
         try {
-            this.resetZip();
-            return this.zip.loadAsync(content, {base64: true});
+            // this.resetZip();
+            let zip: JSZip = new JSZip();
+            return zip.loadAsync(content, {base64: true});
         } catch (e) {
             return Promise.reject(new InsightError());
         }
@@ -81,8 +80,8 @@ export default class DataHandler {
         return this.roomDataHandler.getAllBuildings(zipData);
     }
 
-    public getAllBuildingInIndex(content: string): Promise<any> {
-        return this.roomDataHandler.getAllBuildingInIndex(content, this.zip);
+    public getAllBuildingInIndex(content: any[]): Promise<any> {
+        return this.roomDataHandler.getAllBuildingInIndex(content);
     }
 
     public getAllRoomsInBuilding(buildings: any[]): Promise<any> {
@@ -98,7 +97,7 @@ export default class DataHandler {
     }
 
     public getRoomsContentForBuildings(buildings: any[]): Promise<any> {
-        return this.roomDataHandler.getRoomsContentForBuildings(buildings, this.zip);
+        return this.roomDataHandler.getRoomsContentForBuildings(buildings);
     }
 
     public checkFolder(zipData: JSZip, kind: InsightDatasetKind): Promise<any> {

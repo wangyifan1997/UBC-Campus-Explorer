@@ -11,14 +11,17 @@ export default class RoomDataHandler {
     }
 
     public getAllBuildings(zipData: JSZip): Promise<any> {
-        try {
-            return zipData.file("rooms/index.htm").async("text");
-        } catch (e) {
-            return Promise.reject(new InsightError());
-        }
+        return new Promise<any>((resolve, reject) => {
+            return zipData.file("rooms/index.htm").async("text").then((result: string) => {
+                resolve([result, zipData]);
+            }).catch((err: any) => {
+                reject(new InsightError());
+            });
+        });
     }
 
-    public getAllBuildingInIndex(content: string, zip: JSZip): Promise<any> {
+    public getAllBuildingInIndex(result: any[]): Promise<any> {
+        let content: string = result[0];
         let parsedIndex: any = this.parse5.parse(content);
         let allTr: any[] = [];
         this.findElement(parsedIndex, "nodeName", "tr", allTr);
@@ -27,14 +30,14 @@ export default class RoomDataHandler {
             try {
                 let building: any = this.makeBuilding(tr);
                 if (typeof building["path"] !== "undefined"
-                    && zip.file(building["path"].replace(".", "rooms")) !== null) {
+                    && result[1].file(building["path"].replace(".", "rooms")) !== null) {
                     buildingResult.push(building);
                 }
             } catch (err) {
                 continue;
             }
         }
-        return Promise.resolve(buildingResult);
+        return Promise.resolve([buildingResult, result[1]]);
     }
 
     public getAllRoomsInBuilding(buildings: any[]): Promise<any> {
@@ -195,17 +198,14 @@ export default class RoomDataHandler {
                     resolve(building);
                 });
             }).on("error", (err: any) => {
-                // building["lat"] = undefined;
-                // building["lon"] = undefined;
-                // resolve(building);
-                reject(new InsightError("error getting location " + err));
+                reject(new InsightError(err));
             });
         });
     }
 
-    public getRoomsContentForBuildings(buildings: any[], zip: JSZip): Promise<any> {
-        let allPromises: any[] = buildings.map((building: any) => {
-            return this.getRoomsContentForOneBuilding(building, zip);
+    public getRoomsContentForBuildings(buildings: any[]): Promise<any> {
+        let allPromises: any[] = buildings[0].map((building: any) => {
+            return this.getRoomsContentForOneBuilding(building, buildings[1]);
         });
         return Promise.all(allPromises);
     }
@@ -213,11 +213,13 @@ export default class RoomDataHandler {
 
     private getRoomsContentForOneBuilding(building: any, zip: JSZip): Promise<any> {
         let path = building["path"].replace(".", "rooms");
-        return zip.file(path).async("text").then((content: string) => {
-            building["rooms"] = this.parse5.parse(content);
-            return Promise.resolve(building);
-        }).catch((err: any) => {
-            return Promise.reject(new InsightError());
+        return new Promise<any>((resolve, reject) => {
+            return zip.file(path).async("text").then((content: string) => {
+                building["rooms"] = this.parse5.parse(content);
+                resolve(building);
+            }).catch((err: any) => {
+                reject(new InsightError(err));
+            });
         });
     }
 }
