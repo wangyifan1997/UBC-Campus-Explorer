@@ -176,6 +176,7 @@ export default class RoomDataHandler {
         return Promise.all(allPromises);
     }
 
+    // TODO change the error handling of this
     private getLocationForOneBuilding(building: any): Promise<any> {
         let address: string = building["address"];
         if (typeof address === "undefined") {
@@ -198,7 +199,10 @@ export default class RoomDataHandler {
                     resolve(building);
                 });
             }).on("error", (err: any) => {
-                reject(new InsightError(err));
+                // reject(new InsightError(err));
+                building["lat"] = undefined;
+                building["lon"] = undefined;
+                resolve(building);
             });
         });
     }

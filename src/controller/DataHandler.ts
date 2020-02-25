@@ -9,14 +9,12 @@ import CourseDataHandler from "./CourseDataHandler";
 export default class DataHandler {
     private allDataset: { [index: string]: any };
     private path: string;
-    // private zip: JSZip;
     private roomDataHandler: RoomDataHandler;
     private courseDataHandler: CourseDataHandler;
 
     constructor() {
         this.allDataset = {};
         this.path = "./data";
-        // this.zip = new JSZip();
         this.roomDataHandler = new RoomDataHandler();
         this.courseDataHandler = new CourseDataHandler();
     }
@@ -37,10 +35,6 @@ export default class DataHandler {
             return count === id.length;
         }
     }
-
-    // public resetZip(): void {
-    //     this.zip = new JSZip();
-    // }
 
     private isIdAdded(id: string): boolean {
         return Object.keys(this.allDataset).includes(id);
