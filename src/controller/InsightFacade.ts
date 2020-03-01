@@ -22,14 +22,10 @@ import QueryFinder from "./QueryFinder";
 // muhan branch change
 export default class InsightFacade implements IInsightFacade {
     private dataHandler: DataHandler;
-    private queryValidator: QueryValidator;
-    private queryfinder: QueryFinder;
 
     constructor() {
         this.dataHandler = new DataHandler();
         this.dataHandler.readDataset();
-        this.queryValidator = new QueryValidator();
-        this.queryfinder = new QueryFinder();
         Log.trace("InsightFacadeImpl::init()");
     }
 
@@ -113,25 +109,24 @@ export default class InsightFacade implements IInsightFacade {
                     return Promise.reject(new InsightError());
                 }
             }
-            this.queryValidator.setKeysInQuery([]);
-            this.queryValidator.setIdInQuery([]);
-            this.queryValidator.setTransformationKey([]);
-            this.queryValidator.setAllInsightDataset(this.dataHandler.getAllInsightDataset());
+            let queryValidator: QueryValidator = new QueryValidator();
+            queryValidator.setAllInsightDataset(this.dataHandler.getAllInsightDataset());
             if (typeof query.TRANSFORMATIONS !== "undefined") {
-                if (!(this.queryValidator.validateWhere(query.WHERE)
-                    && this.queryValidator.validateTransformations(query.TRANSFORMATIONS)
-                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                if (!(queryValidator.validateWhere(query.WHERE)
+                    && queryValidator.validateTransformations(query.TRANSFORMATIONS)
+                    && queryValidator.validateOptions(query.OPTIONS))) {
                     return Promise.reject(new InsightError());
                 }
             } else {
-                if (!(this.queryValidator.validateWhere(query.WHERE)
-                    && this.queryValidator.validateOptions(query.OPTIONS))) {
+                if (!(queryValidator.validateWhere(query.WHERE)
+                    && queryValidator.validateOptions(query.OPTIONS))) {
                     return Promise.reject(new InsightError());
                 }
             }
-            this.queryfinder.setAllDataset(this.dataHandler.getAllDataset());
-            this.queryfinder.setidInQuery(this.queryValidator.getIdInQuery()[0]);
-            return this.queryfinder.findMatchingSections(query);
+            let queryFinder: QueryFinder = new QueryFinder();
+            queryFinder.setAllDataset(this.dataHandler.getAllDataset());
+            queryFinder.setidInQuery(queryValidator.getIdInQuery()[0]);
+            return queryFinder.findMatchingSections(query);
         } catch (err) {
             if (!(err instanceof InsightError) && !(err instanceof ResultTooLargeError)) {
                 return Promise.reject(new InsightError());
