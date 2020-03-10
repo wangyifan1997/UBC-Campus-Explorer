@@ -96,24 +96,18 @@ export default class Server {
     }
 
     private addDataset(req: restify.Request, res: restify.Response, next: restify.Next) {
-        let data: any[] = [];
-        req.on("data", (chunk) => {
-            data.push(chunk);
-        });
-        req.on("end", () => {
-            let content: string = Buffer.concat(data).toString("base64");
-            let kind: InsightDatasetKind;
-            if (req.params.kind === "courses") {
-                kind = InsightDatasetKind.Courses;
-            } else {
-                kind = InsightDatasetKind.Rooms;
-            }
-            this.insightFacade.addDataset(req.params.id, content, kind).then((arr: string[]) => {
-                res.json(200, {result: arr});
-            }).catch((err) => {
-                res.json(400, {error: "add dataset fail"});
-            });
-            return next();
+        let raw = req.body;
+        let content = raw.toString("base64");
+        let kind: InsightDatasetKind;
+        if (req.params.kind === "courses") {
+            kind = InsightDatasetKind.Courses;
+        } else {
+            kind = InsightDatasetKind.Rooms;
+        }
+        this.insightFacade.addDataset(req.params.id, content, kind).then((arr: string[]) => {
+            res.json(200, {result: arr});
+        }).catch((err) => {
+            res.json(400, {error: "add dataset fail"});
         });
     }
 
