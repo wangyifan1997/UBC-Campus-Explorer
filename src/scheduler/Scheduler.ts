@@ -25,8 +25,6 @@ export default class Scheduler implements IScheduler {
     }
 
     private createTuples(result: Array<[SchedRoom, SchedSection, TimeSlot]>, timeTable: any): void {
-        // eslint-disable-next-line no-console
-        console.log("createTuples");
         let size: number = timeTable["roomOfColumn"].length;
         for (let i: number = 0; i < size; i++) {
             for (let key of Object.keys(timeTable)) {
@@ -40,8 +38,6 @@ export default class Scheduler implements IScheduler {
     }
 
     private allocateRooms(timeTable: any, unschedRooms: SchedRoom[], maxRegisters: number[]): void {
-        // eslint-disable-next-line no-console
-        console.log("allocateRooms");
         timeTable["roomOfColumn"] = [];
         while (maxRegisters.length > 0 && unschedRooms.length > 0) {
             for (let aRoom of unschedRooms) {
@@ -57,14 +53,10 @@ export default class Scheduler implements IScheduler {
     }
 
     private getRoomCapacity(room: SchedRoom): number {
-        // eslint-disable-next-line no-console
-        console.log("getRoomCapacity");
         return room["rooms_seats"];
     }
 
     private fillTimeTable(timeTable: any, unschedSections: SchedSection[], maxRegisters: number[]): void {
-        // eslint-disable-next-line no-console
-        console.log("fillTimeTable");
         let skippedTimeSlots: Array<[number, string]> = [];
         let currColumn = 0;
         while (unschedSections.length > 0) {
@@ -76,8 +68,6 @@ export default class Scheduler implements IScheduler {
 
     private pushOneColumn(unschedSections: SchedSection[], timeTable: any,
                           skippedTimeSlots: Array<[number, string]>, currColumn: number): void {
-        // eslint-disable-next-line no-console
-        console.log("pushOneColumn");
         for (let key of Object.keys(timeTable)) {
             this.fillSkippedTimeSlots(unschedSections, timeTable, skippedTimeSlots);
             if (!this.isCourseConflict(unschedSections[0], timeTable[key])) {
@@ -95,8 +85,6 @@ export default class Scheduler implements IScheduler {
 
     private fillSkippedTimeSlots(unschedSections: SchedSection[], timeTable: any,
                                  skippedTimeSlots: Array<[number, string]>): void {
-        // eslint-disable-next-line no-console
-        console.log("fillSkippedTimeSlots");
         while (skippedTimeSlots.length > 0 && unschedSections.length > 0) {
             let filledTimeSlot: boolean = false;
             for (let timeSlot of skippedTimeSlots) {
@@ -119,16 +107,12 @@ export default class Scheduler implements IScheduler {
     }
 
     private deleteExtraSections(unschedSections: SchedSection[], timeTable: any): void {
-        // eslint-disable-next-line no-console
-        console.log("deleteExtraSections");
         while (this.isTooManySections(unschedSections[0], timeTable)) {
             unschedSections.shift();
         }
     }
 
     private isTooManySections(section: SchedSection, timeTable: any): boolean {
-        // eslint-disable-next-line no-console
-        console.log("isTooManySections");
         for (let key of Object.keys(timeTable)) {
             if (!this.isCourseConflict(section, timeTable[key])) {
                 return false;
@@ -138,8 +122,6 @@ export default class Scheduler implements IScheduler {
     }
 
     private isCourseConflict(section: SchedSection, previousSections: SchedSection[]): boolean {
-        // eslint-disable-next-line no-console
-        console.log("isCourseConflict");
         for (let aSection of previousSections) {
             if (this.isSameCourse(aSection, section)) {
                 return true;
@@ -169,8 +151,6 @@ export default class Scheduler implements IScheduler {
     }
 
     private groupRooms(groupedRoom: any, allRooms: SchedRoom[]): void {
-        // eslint-disable-next-line no-console
-        console.log("groupRooms");
         for (let room of allRooms) {
             if (!Object.keys(groupedRoom).includes(room["rooms_shortname"])) {
                 groupedRoom[room["rooms_shortname"]] = [];
@@ -180,23 +160,17 @@ export default class Scheduler implements IScheduler {
     }
 
     private sortRoomsAndSections(sections: SchedSection[], rooms: SchedRoom[]): void {
-        // eslint-disable-next-line no-console
-        console.log("sortRoomsAndSections");
         sections.sort((a, b) =>
             (this.getEnrollment(a) < this.getEnrollment(b)) ? 1 : -1);
         rooms.sort((a, b) => (a["rooms_seats"] > b["rooms_seats"]) ? 1 : -1);
     }
 
     private isSameCourse(sectionA: SchedSection, sectionB: SchedSection): boolean {
-        // eslint-disable-next-line no-console
-        console.log("isSameCourse");
         return (sectionA["courses_dept"] === sectionA["courses_dept"] &&
             sectionB["courses_id"] === sectionB["courses_id"]);
     }
 
     private getEnrollment(section: SchedSection): number {
-        // eslint-disable-next-line no-console
-        console.log("getEnrollment");
         return section["courses_pass"] + section["courses_fail"] + section["courses_audit"];
     }
 }

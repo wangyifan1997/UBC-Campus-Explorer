@@ -61,8 +61,8 @@ describe("Test Scheduler", () => {
             rooms_lon: 10
         }];
         let result: Array<[SchedRoom, SchedSection, TimeSlot]> = scheduler.schedule(sections, rooms);
-        // eslint-disable-next-line no-console
-        console.log(result);
+        // // eslint-disable-next-line no-console
+        // console.log(result);
         expect(result).not.to.deep.equal([]);
     });
 });
