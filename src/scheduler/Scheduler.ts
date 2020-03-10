@@ -13,7 +13,31 @@ export default class Scheduler implements IScheduler {
         this.sortRoomsAndSections(unschedSections, unschedRooms);
         this.groupRooms(groupedRoom, rooms);
         this.fillTimeTable(timeTable, unschedSections, maxRegisters);
+        this.allocateRooms(timeTable, unschedRooms, maxRegisters);
         return [];
+    }
+
+    private createTuples(): void {
+        return;
+    }
+
+    private allocateRooms(timeTable: any, unschedRooms: SchedRoom[], maxRegisters: number[]): void {
+        timeTable["roomOfColumn"] = [];
+        while (maxRegisters !== [] && unschedRooms !== []) {
+            for (let enrollment of maxRegisters) {
+                for (let aRoom of unschedRooms) {
+                    if (enrollment <= this.getRoomCapacity(aRoom)) {
+                        timeTable["roomOfColumn"].push(aRoom);
+                        unschedRooms.splice(unschedRooms.indexOf(aRoom), 1);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    private getRoomCapacity(room: SchedRoom): number {
+        return room["rooms_seats"];
     }
 
     private fillTimeTable(timeTable: any, unschedSections: SchedSection[], maxRegisters: number[]): void {
@@ -33,6 +57,9 @@ export default class Scheduler implements IScheduler {
             if (!this.isCourseConflict(unschedSections[0], timeTable[key])) {
                 timeTable[key].push(unschedSections);
                 unschedSections.shift();
+                if (unschedSections === []) {
+                    break;
+                }
                 this.deleteExtraSections(unschedSections, timeTable);
             } else {
                 skippedTimeSlots.push([currColumn, key]);
@@ -42,12 +69,15 @@ export default class Scheduler implements IScheduler {
 
     private fillSkippedTimeSlots(unschedSections: SchedSection[], timeTable: any,
                                  skippedTimeSlots: Array<[number, string]>): void {
-        while (skippedTimeSlots !== []) {
+        while (skippedTimeSlots !== [] && unschedSections !== []) {
             let filledTimeSlot: boolean = false;
             for (let timeSlot of skippedTimeSlots) {
                 if (!this.isCourseConflict(unschedSections[0], timeTable[timeSlot[1]])) {
                     timeTable[timeSlot[1]].splice(timeSlot[0], 0, unschedSections[0]);
                     unschedSections.shift();
+                    if (unschedSections === []) {
+                        break;
+                    }
                     this.deleteExtraSections(unschedSections, timeTable);
                     skippedTimeSlots.splice(skippedTimeSlots.indexOf(timeSlot), 1);
                     filledTimeSlot = true;
