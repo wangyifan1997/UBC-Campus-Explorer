@@ -9,7 +9,7 @@ import Log from "../src/Util";
 import * as fs from "fs-extra";
 
 describe("Facade D3", function () {
-
+    const cacheDir = __dirname + "/../data";
     let facade: InsightFacade = null;
     let server: Server = null;
 
@@ -32,11 +32,21 @@ describe("Facade D3", function () {
     });
 
     beforeEach(function () {
-        // might want to add some process logging here to keep track of what"s going on
+        server.stop();
+        server.start().then(function (val: boolean) {
+            Log.info("App::initServer() - started: " + val);
+        }).catch(function (err: Error) {
+            Log.error("App::initServer() - ERROR: " + err.message);
+        });
     });
 
     afterEach(function () {
-        // might want to add some process logging here to keep track of what"s going on
+        try {
+            fs.removeSync(cacheDir);
+            fs.mkdirSync(cacheDir);
+        } catch (err) {
+            Log.error(err);
+        }
     });
 
     // Sample on how to format PUT requests

@@ -6,7 +6,7 @@ import fs = require("fs");
 import restify = require("restify");
 import Log from "../Util";
 import InsightFacade from "../controller/InsightFacade";
-import {InsightDataset, InsightDatasetKind, InsightError} from "../controller/IInsightFacade";
+import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "../controller/IInsightFacade";
 
 /**
  * This configures the REST endpoints for the server.
@@ -72,7 +72,7 @@ export default class Server {
                         return next();
                     });
                 that.rest.get("/echo/:msg", Server.echo);
-                that.rest.post("/dataset/:id", that.removeDataset);
+                that.rest.del("/dataset/:id", that.removeDataset);
                 that.rest.put("/dataset/:id/:kind", that.addDataset);
                 that.rest.post("/query", that.performQuery);
                 that.rest.get("/datasets", that.listDatasets);
@@ -87,7 +87,6 @@ export default class Server {
                     Log.info("Server::start() - restify ERROR: " + err);
                     reject(err);
                 });
-
             } catch (err) {
                 Log.error("Server::start() - ERROR: " + err);
                 reject(err);
@@ -109,6 +108,7 @@ export default class Server {
         }).catch((err) => {
             res.json(400, {error: "add dataset fail"});
         });
+        return next();
     }
 
     private removeDataset(req: restify.Request, res: restify.Response, next: restify.Next) {
@@ -117,8 +117,10 @@ export default class Server {
         }).catch((err) => {
             if (err instanceof InsightError) {
                 res.json(400, {error: "invalid id"});
-            } else {
+            } else if (err instanceof NotFoundError) {
                 res.json(404, {error: "not found error"});
+            } else {
+                res.json(400, {error: "error"});
             }
         });
         return next();
@@ -131,12 +133,14 @@ export default class Server {
         }).catch((err) => {
             res.json(400, {error: "error trying to perform query"});
         });
+        return next();
     }
 
     private listDatasets(req: restify.Request, res: restify.Response, next: restify.Next) {
         this.insightFacade.listDatasets().then((arr: InsightDataset[]) => {
             res.json(200, {result: arr});
         });
+        return next();
     }
 
     // The next two methods handle the echo service.
