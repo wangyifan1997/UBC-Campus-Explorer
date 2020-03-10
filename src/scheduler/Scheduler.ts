@@ -3,47 +3,71 @@ import {IScheduler, SchedRoom, SchedSection, TimeSlot} from "./IScheduler";
 export default class Scheduler implements IScheduler {
     // muhanc3
     public schedule(sections: SchedSection[], rooms: SchedRoom[]): Array<[SchedRoom, SchedSection, TimeSlot]> {
+
+        if (sections.length === 0 || rooms.length === 0) {
+            return [];
+        }
+
         let unschedRooms: SchedRoom[] = rooms;
         let unschedSections: SchedSection[] = sections;
         let schedBuildings: string[] = []; // can be local in function
         let groupedRoom: any = {};
         let timeTable: any = this.initTimeTable();
         let maxRegisters: number[] = [];
+        let result: Array<[SchedRoom, SchedSection, TimeSlot]> = [];
 
         this.sortRoomsAndSections(unschedSections, unschedRooms);
         this.groupRooms(groupedRoom, rooms);
         this.fillTimeTable(timeTable, unschedSections, maxRegisters);
         this.allocateRooms(timeTable, unschedRooms, maxRegisters);
-        return [];
+        this.createTuples(result, timeTable);
+        return result;
     }
 
-    private createTuples(): void {
-        return;
-    }
-
-    private allocateRooms(timeTable: any, unschedRooms: SchedRoom[], maxRegisters: number[]): void {
-        timeTable["roomOfColumn"] = [];
-        while (maxRegisters !== [] && unschedRooms !== []) {
-            for (let enrollment of maxRegisters) {
-                for (let aRoom of unschedRooms) {
-                    if (enrollment <= this.getRoomCapacity(aRoom)) {
-                        timeTable["roomOfColumn"].push(aRoom);
-                        unschedRooms.splice(unschedRooms.indexOf(aRoom), 1);
-                        break;
-                    }
+    private createTuples(result: Array<[SchedRoom, SchedSection, TimeSlot]>, timeTable: any): void {
+        // eslint-disable-next-line no-console
+        console.log("createTuples");
+        let size: number = timeTable["roomOfColumn"].length;
+        for (let i: number = 0; i < size; i++) {
+            for (let key of Object.keys(timeTable)) {
+                if (key !== "roomOfColumn" && timeTable[key][i] !== undefined
+                    && timeTable["roomOfColumn"][i] !== undefined) {
+                    result.push([timeTable["roomOfColumn"][i] as SchedRoom,
+                        timeTable[key][i] as SchedSection, key as TimeSlot]);
                 }
             }
         }
     }
 
+    private allocateRooms(timeTable: any, unschedRooms: SchedRoom[], maxRegisters: number[]): void {
+        // eslint-disable-next-line no-console
+        console.log("allocateRooms");
+        timeTable["roomOfColumn"] = [];
+        while (maxRegisters.length > 0 && unschedRooms.length > 0) {
+            for (let aRoom of unschedRooms) {
+                if (maxRegisters[0] <= this.getRoomCapacity(aRoom)) {
+                    timeTable["roomOfColumn"].push(aRoom);
+                    maxRegisters.shift();
+                    unschedRooms.splice(unschedRooms.indexOf(aRoom), 1);
+                    break;
+                }
+
+            }
+        }
+    }
+
     private getRoomCapacity(room: SchedRoom): number {
+        // eslint-disable-next-line no-console
+        console.log("getRoomCapacity");
         return room["rooms_seats"];
     }
 
     private fillTimeTable(timeTable: any, unschedSections: SchedSection[], maxRegisters: number[]): void {
+        // eslint-disable-next-line no-console
+        console.log("fillTimeTable");
         let skippedTimeSlots: Array<[number, string]> = [];
         let currColumn = 0;
-        while (unschedSections !== []) {
+        while (unschedSections.length > 0) {
             maxRegisters.push(this.getEnrollment(unschedSections[0]));
             this.pushOneColumn(unschedSections, timeTable, skippedTimeSlots, currColumn);
             currColumn++;
@@ -52,12 +76,14 @@ export default class Scheduler implements IScheduler {
 
     private pushOneColumn(unschedSections: SchedSection[], timeTable: any,
                           skippedTimeSlots: Array<[number, string]>, currColumn: number): void {
+        // eslint-disable-next-line no-console
+        console.log("pushOneColumn");
         for (let key of Object.keys(timeTable)) {
             this.fillSkippedTimeSlots(unschedSections, timeTable, skippedTimeSlots);
             if (!this.isCourseConflict(unschedSections[0], timeTable[key])) {
-                timeTable[key].push(unschedSections);
+                timeTable[key].push(unschedSections[0]);
                 unschedSections.shift();
-                if (unschedSections === []) {
+                if (unschedSections.length === 0) {
                     break;
                 }
                 this.deleteExtraSections(unschedSections, timeTable);
@@ -69,13 +95,15 @@ export default class Scheduler implements IScheduler {
 
     private fillSkippedTimeSlots(unschedSections: SchedSection[], timeTable: any,
                                  skippedTimeSlots: Array<[number, string]>): void {
-        while (skippedTimeSlots !== [] && unschedSections !== []) {
+        // eslint-disable-next-line no-console
+        console.log("fillSkippedTimeSlots");
+        while (skippedTimeSlots.length > 0 && unschedSections.length > 0) {
             let filledTimeSlot: boolean = false;
             for (let timeSlot of skippedTimeSlots) {
                 if (!this.isCourseConflict(unschedSections[0], timeTable[timeSlot[1]])) {
                     timeTable[timeSlot[1]].splice(timeSlot[0], 0, unschedSections[0]);
                     unschedSections.shift();
-                    if (unschedSections === []) {
+                    if (unschedSections.length === 0) {
                         break;
                     }
                     this.deleteExtraSections(unschedSections, timeTable);
@@ -91,12 +119,16 @@ export default class Scheduler implements IScheduler {
     }
 
     private deleteExtraSections(unschedSections: SchedSection[], timeTable: any): void {
+        // eslint-disable-next-line no-console
+        console.log("deleteExtraSections");
         while (this.isTooManySections(unschedSections[0], timeTable)) {
             unschedSections.shift();
         }
     }
 
     private isTooManySections(section: SchedSection, timeTable: any): boolean {
+        // eslint-disable-next-line no-console
+        console.log("isTooManySections");
         for (let key of Object.keys(timeTable)) {
             if (!this.isCourseConflict(section, timeTable[key])) {
                 return false;
@@ -106,6 +138,8 @@ export default class Scheduler implements IScheduler {
     }
 
     private isCourseConflict(section: SchedSection, previousSections: SchedSection[]): boolean {
+        // eslint-disable-next-line no-console
+        console.log("isCourseConflict");
         for (let aSection of previousSections) {
             if (this.isSameCourse(aSection, section)) {
                 return true;
@@ -135,6 +169,8 @@ export default class Scheduler implements IScheduler {
     }
 
     private groupRooms(groupedRoom: any, allRooms: SchedRoom[]): void {
+        // eslint-disable-next-line no-console
+        console.log("groupRooms");
         for (let room of allRooms) {
             if (!Object.keys(groupedRoom).includes(room["rooms_shortname"])) {
                 groupedRoom[room["rooms_shortname"]] = [];
@@ -144,17 +180,23 @@ export default class Scheduler implements IScheduler {
     }
 
     private sortRoomsAndSections(sections: SchedSection[], rooms: SchedRoom[]): void {
+        // eslint-disable-next-line no-console
+        console.log("sortRoomsAndSections");
         sections.sort((a, b) =>
             (this.getEnrollment(a) < this.getEnrollment(b)) ? 1 : -1);
         rooms.sort((a, b) => (a["rooms_seats"] > b["rooms_seats"]) ? 1 : -1);
     }
 
     private isSameCourse(sectionA: SchedSection, sectionB: SchedSection): boolean {
+        // eslint-disable-next-line no-console
+        console.log("isSameCourse");
         return (sectionA["courses_dept"] === sectionA["courses_dept"] &&
             sectionB["courses_id"] === sectionB["courses_id"]);
     }
 
     private getEnrollment(section: SchedSection): number {
+        // eslint-disable-next-line no-console
+        console.log("getEnrollment");
         return section["courses_pass"] + section["courses_fail"] + section["courses_audit"];
     }
 }

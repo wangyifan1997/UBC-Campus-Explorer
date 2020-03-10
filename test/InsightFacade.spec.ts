@@ -5,6 +5,9 @@ import InsightFacade from "../src/controller/InsightFacade";
 import Log from "../src/Util";
 import TestUtil from "./TestUtil";
 import DataHandler from "../src/controller/DataHandler";
+import Scheduler from "../src/scheduler/Scheduler";
+import {SchedRoom, SchedSection, TimeSlot} from "../src/scheduler/IScheduler";
+import {fail} from "assert";
 
 // This should match the schema given to TestUtil.validate(..) in TestUtil.readTestQueries(..)
 // except 'filename' which is injected when the file is read.
@@ -15,6 +18,54 @@ export interface ITestQuery {
     result: any;
     filename: string;  // This is injected when reading the file
 }
+
+describe("Test Scheduler", () => {
+    it("should be able to fill in timeTable", () => {
+        let scheduler: Scheduler = new Scheduler();
+        let sections: SchedSection[] = [];
+        let rooms: SchedRoom[] = [];
+        let result: Array<[SchedRoom, SchedSection, TimeSlot]> = scheduler.schedule(sections, rooms);
+        // eslint-disable-next-line no-console
+        console.log(result);
+        expect(result).to.deep.equal([]);
+    });
+
+    it("should be able to fill in timeTable", () => {
+        let scheduler: Scheduler = new Scheduler();
+        let sections: SchedSection[] = [{
+            courses_dept: "cpsc",
+            courses_id: "320",
+            courses_uuid: "1000",
+            courses_pass: 48,
+            courses_fail: 1,
+            courses_audit: 1
+        }, {
+            courses_dept: "cpsc",
+            courses_id: "320",
+            courses_uuid: "1001",
+            courses_pass: 47,
+            courses_fail: 1,
+            courses_audit: 1
+        }];
+        let rooms: SchedRoom[] = [{
+            rooms_shortname: "buch",
+            rooms_number: "100",
+            rooms_seats: 5,
+            rooms_lat: 10,
+            rooms_lon: 10
+        }, {
+            rooms_shortname: "dmp",
+            rooms_number: "101",
+            rooms_seats: 100,
+            rooms_lat: 10,
+            rooms_lon: 10
+        }];
+        let result: Array<[SchedRoom, SchedSection, TimeSlot]> = scheduler.schedule(sections, rooms);
+        // eslint-disable-next-line no-console
+        console.log(result);
+        expect(result).not.to.deep.equal([]);
+    });
+});
 
 describe("Test helper methods", () => {
     let dataHandler: DataHandler;
