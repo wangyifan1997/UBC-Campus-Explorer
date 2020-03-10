@@ -5,6 +5,8 @@
 import fs = require("fs");
 import restify = require("restify");
 import Log from "../Util";
+import InsightFacade from "../controller/InsightFacade";
+import {InsightDataset, InsightDatasetKind, InsightError} from "../controller/IInsightFacade";
 
 /**
  * This configures the REST endpoints for the server.
@@ -13,10 +15,20 @@ export default class Server {
 
     private port: number;
     private rest: restify.Server;
+    private insightFacade: InsightFacade;
 
     constructor(port: number) {
         Log.info("Server::<init>( " + port + " )");
         this.port = port;
+        this.insightFacade = new InsightFacade();
+        this.bindThis();
+    }
+
+    private bindThis() {
+        this.listDatasets = this.listDatasets.bind(this);
+        this.addDataset = this.addDataset.bind(this);
+        this.removeDataset = this.removeDataset.bind(this);
+        this.performQuery = this.performQuery.bind(this);
     }
 
     /**
@@ -35,6 +47,8 @@ export default class Server {
         });
     }
 
+    // This is an example endpoint that you can invoke by accessing this URL in your browser:
+    // http://localhost:4321/echo/hello
     /**
      * Starts the server. Returns a promise with a boolean value. Promises are used
      * here because starting the server takes some time and we want to know when it
@@ -47,7 +61,6 @@ export default class Server {
         return new Promise(function (fulfill, reject) {
             try {
                 Log.info("Server::start() - start");
-
                 that.rest = restify.createServer({
                     name: "insightUBC",
                 });
@@ -58,21 +71,16 @@ export default class Server {
                         res.header("Access-Control-Allow-Headers", "X-Requested-With");
                         return next();
                     });
-
-                // This is an example endpoint that you can invoke by accessing this URL in your browser:
-                // http://localhost:4321/echo/hello
                 that.rest.get("/echo/:msg", Server.echo);
-
-                // NOTE: your endpoints should go here
-
-                // This must be the last endpoint!
+                that.rest.post("/dataset/:id", that.removeDataset);
+                that.rest.put("/dataset/:id/:kind", that.addDataset);
+                that.rest.post("/query", that.performQuery);
+                that.rest.get("/datasets", that.listDatasets);
                 that.rest.get("/.*", Server.getStatic);
-
                 that.rest.listen(that.port, function () {
                     Log.info("Server::start() - restify listening: " + that.rest.url);
                     fulfill(true);
                 });
-
                 that.rest.on("error", function (err: string) {
                     // catches errors in restify start; unusual syntax due to internal
                     // node not using normal exceptions here
@@ -84,6 +92,56 @@ export default class Server {
                 Log.error("Server::start() - ERROR: " + err);
                 reject(err);
             }
+        });
+    }
+
+    private addDataset(req: restify.Request, res: restify.Response, next: restify.Next) {
+        let data: any[] = [];
+        req.on("data", (chunk) => {
+            data.push(chunk);
+        });
+        req.on("end", () => {
+            let content: string = Buffer.concat(data).toString("base64");
+            let kind: InsightDatasetKind;
+            if (req.params.kind === "courses") {
+                kind = InsightDatasetKind.Courses;
+            } else {
+                kind = InsightDatasetKind.Rooms;
+            }
+            this.insightFacade.addDataset(req.params.id, content, kind).then((arr: string[]) => {
+                res.json(200, {result: arr});
+            }).catch((err) => {
+                res.json(400, {error: "add dataset fail"});
+            });
+            return next();
+        });
+    }
+
+    private removeDataset(req: restify.Request, res: restify.Response, next: restify.Next) {
+        this.insightFacade.removeDataset(req.params.id).then((id: string) => {
+            res.json(200, {result: id});
+        }).catch((err) => {
+            if (err instanceof InsightError) {
+                res.json(400, {error: "invalid id"});
+            } else {
+                res.json(404, {error: "not found error"});
+            }
+        });
+        return next();
+    }
+
+    private performQuery(req: restify.Request, res: restify.Response, next: restify.Next) {
+        let query: any = req.body;
+        this.insightFacade.performQuery(query).then((arr: any[]) => {
+            res.json(200, {result: arr});
+        }).catch((err) => {
+            res.json(400, {error: "error trying to perform query"});
+        });
+    }
+
+    private listDatasets(req: restify.Request, res: restify.Response, next: restify.Next) {
+        this.insightFacade.listDatasets().then((arr: InsightDataset[]) => {
+            res.json(200, {result: arr});
         });
     }
 
