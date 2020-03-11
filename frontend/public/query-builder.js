@@ -6,6 +6,9 @@
  * @returns query object adhering to the query EBNF
  */
 CampusExplorer.buildQuery = function () {
+    const roomFields = ["fullname", "shortname", "number", "name", "address", "lat", "lon", "seats", "type", "furniture", "href"];
+    const coursesFields = ["avg", "pass", "fail", "audit", "year", "dept", "id", "instructor", "title", "uuid"];
+    const fields = [];
     let query = {};
     let dataset = document.getElementsByClassName("nav-item tab active")[0].getAttribute("data-type");
     let where = this.buildWhere(dataset);
@@ -80,12 +83,39 @@ CampusExplorer.buildColumns = function (dataset) {
     return columns;
 };
 
-CampusExplorer.buildGroups = function (dataset) {
+CampusExplorer.buildGroups = function (dataset, std) {
     let groups = [];
     let allGroups = document.getElementsByClassName("form-group groups")[0].getElementsByClassName("control field");
     for (let group of allGroups) {
         if (group.getElementsByTagName("input")[0].getAttribute("checked")) {
-            groups.push(dataset + "_" + group.getElementsByTagName("input")[0].getAttribute("value"));
+            const val = group.getElementsByTagName("input")[0].getAttribute("value");
+            if (std.includes(val)) {
+                group.push(dataset + "_" + val)
+            } else {
+                groups.push(val);
+            }
         }
     }
+    return groups;
 };
+
+CampusExplorer.buildOrder = function (dataset, std) {
+    let fields = [];
+    let options = document.getElementsByClassName("form-group order")[0]
+        .getElementsByClassName("control order fields")[0].getElementsByTagName("option");
+    for (let option of options) {
+        if (option.getAttribute("selected")) {
+            const val = option.getAttribute("value");
+            if (std.includes(val)) {
+                fields.push(dataset + "_" + val);
+            } else {
+                fields.push(val);
+            }
+        }
+    }
+    if (fields.length === 0) {
+        return {};
+    } else {
+        // TODO
+    }
+}
