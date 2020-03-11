@@ -8,12 +8,48 @@
 CampusExplorer.buildQuery = function () {
     const roomFields = ["fullname", "shortname", "number", "name", "address", "lat", "lon", "seats", "type", "furniture", "href"];
     const coursesFields = ["avg", "pass", "fail", "audit", "year", "dept", "id", "instructor", "title", "uuid"];
-    const fields = [];
-    let query = {};
+    let fields;
     let dataset = document.getElementsByClassName("nav-item tab active")[0].getAttribute("data-type");
+    if (dataset === "courses") {
+        fields = coursesFields;
+    } else {
+        fields = roomFields;
+    }
+    let query = {};
     let where = this.buildWhere(dataset);
+    let options = this.buildOptions(dataset, fields);
+    let transformations = this.buildTransformations(dataset, fields);
+    query["WHERE"] = where;
+    query["OPTIONS"] = options;
+    if (Object.keys(transformations) !== 0) {
+        query["TRANSFORMATIONS"] = transformations;
+    }
     return query;
 };
+
+CampusExplorer.buildTransformations = function (dataset, fields) {
+    let group = this.buildGroup(dataset, fields);
+    let apply = this.buildApply(dataset);
+    let result = {}
+    if (group.length !== 0) {
+        result["GROUP"] = group;
+    }
+    if (apply.length !== 0) {
+        result["APPLY"] = apply;
+    }
+    return result;
+}
+
+CampusExplorer.buildOptions = function (dataset, fields) {
+    let columns = this.buildColumns(dataset);
+    let order = this.buildOrder(dataset, fields);
+    let result = {};
+    result["COLUMNS"] = columns;
+    if (Object.keys(order) !== 0) {
+        result["ORDER"] = order;
+    }
+    return result;
+}
 
 CampusExplorer.buildWhere = function (dataset) {
     let conds = document.getElementsByClassName("control-group condition");
@@ -83,14 +119,14 @@ CampusExplorer.buildColumns = function (dataset) {
     return columns;
 };
 
-CampusExplorer.buildGroups = function (dataset, std) {
+CampusExplorer.buildGroup = function (dataset, std) {
     let groups = [];
     let allGroups = document.getElementsByClassName("form-group groups")[0].getElementsByClassName("control field");
     for (let group of allGroups) {
         if (group.getElementsByTagName("input")[0].getAttribute("checked")) {
             const val = group.getElementsByTagName("input")[0].getAttribute("value");
             if (std.includes(val)) {
-                group.push(dataset + "_" + val)
+                group.push(dataset + "_" + val);
             } else {
                 groups.push(val);
             }
@@ -116,6 +152,46 @@ CampusExplorer.buildOrder = function (dataset, std) {
     if (fields.length === 0) {
         return {};
     } else {
-        // TODO
+        let isDescending = document.getElementsByClassName("control descending")[0].getElementsByTagName("input")[0].getAttribute("checked");
+        if (isDescending) {
+            return {dir: "DOWN", keys: fields};
+        } else {
+            return {dir: "UP", keys: fields};
+        }
     }
-}
+};
+
+CampusExplorer.buildApply = function (dataset) {
+    let result = [];
+    let rules = document.getElementsByClassName("control-group transformation");
+    for (let rule of rules) {
+        this.buildSingleRule(dataset, rule, result);
+    }
+    return result;
+};
+
+CampusExplorer.buildSingleRule = function (dataset, rule, result) {
+    let term = rule.getElementsByClassName("control term")[0].getElementsByTagName("input")[0].getAttribute("value");
+    if (term === null) {
+        term = "";
+    }
+    let opers = rule.getElementsByClassName("control operators")[0].getElementsByTagName("option");
+    let operator;
+    for (let oper of opers) {
+        if (oper.getAttribute("selected")) {
+            operator = oper.getAttribute("value");
+        }
+    }
+    let flds = rule.getElementsByClassName("control fields")[0].getElementsByTagName("option");
+    let field;
+    for (let fld of flds) {
+        if (fld.getAttribute("selected")) {
+            field = dataset + "_" + fld.getAttribute("value");
+        }
+    }
+    let res0 = {};
+    res0[operator] = field;
+    let res1 = {};
+    res1[term] = res0;
+    result.push(res1);
+};
