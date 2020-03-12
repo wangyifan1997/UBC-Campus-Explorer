@@ -16,7 +16,7 @@ CampusExplorer.sendQuery = function (query) {
             if (xmlHttpRequest.status === 200) {
                 fulfill(JSON.parse(xmlHttpRequest.response));
             } else {
-                reject("response is not 200");
+                reject(JSON.parse(xmlHttpRequest.response));
             }
         };
 

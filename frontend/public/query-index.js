@@ -14,6 +14,6 @@ submitButton.onclick = function () {
     CampusExplorer.sendQuery(query).then((result) => {
         CampusExplorer.renderResult(result);
     }).catch((err) => {
-        CampusExplorer.renderResult(err.message);
+        CampusExplorer.renderResult(err);
     });
 };
