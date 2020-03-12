@@ -24,7 +24,6 @@ CampusExplorer.buildQuery = function () {
     if (Object.keys(transformations).length !== 0) {
         query["TRANSFORMATIONS"] = transformations;
     }
-    console.log(query["TRANSFORMATIONS"]);
     return query;
 };
 
@@ -38,7 +37,6 @@ CampusExplorer.buildTransformations = function (dataset, fields) {
     if (apply.length !== 0) {
         result["APPLY"] = apply;
     }
-    console.log(result);
     return result;
 };
 
