@@ -6,19 +6,11 @@
  * @returns query object adhering to the query EBNF
  */
 CampusExplorer.buildQuery = function () {
-    const roomFields = ["fullname", "shortname", "number", "name", "address", "lat", "lon", "seats", "type", "furniture", "href"];
-    const coursesFields = ["avg", "pass", "fail", "audit", "year", "dept", "id", "instructor", "title", "uuid"];
-    let fields;
     let dataset = document.getElementsByClassName("nav-item tab active")[0].getAttribute("data-type");
-    if (dataset === "courses") {
-        fields = coursesFields;
-    } else {
-        fields = roomFields;
-    }
     let query = {};
     let where = this.buildWhere(dataset);
-    let options = this.buildOptions(dataset, fields);
-    let transformations = this.buildTransformations(dataset, fields);
+    let options = this.buildOptions(dataset);
+    let transformations = this.buildTransformations(dataset);
     query["WHERE"] = where;
     query["OPTIONS"] = options;
     if (Object.keys(transformations).length !== 0) {
@@ -27,8 +19,8 @@ CampusExplorer.buildQuery = function () {
     return query;
 };
 
-CampusExplorer.buildTransformations = function (dataset, fields) {
-    let group = this.buildGroup(dataset, fields);
+CampusExplorer.buildTransformations = function (dataset) {
+    let group = this.buildGroup(dataset);
     let apply = this.buildApply(dataset);
     let result = {};
     if (group.length !== 0) {
@@ -40,9 +32,9 @@ CampusExplorer.buildTransformations = function (dataset, fields) {
     return result;
 };
 
-CampusExplorer.buildOptions = function (dataset, fields) {
+CampusExplorer.buildOptions = function (dataset) {
     let columns = this.buildColumns(dataset);
-    let order = this.buildOrder(dataset, fields);
+    let order = this.buildOrder(dataset);
     let result = {};
     result["COLUMNS"] = columns;
     if (Object.keys(order).length !== 0) {
@@ -116,36 +108,38 @@ CampusExplorer.buildColumns = function (dataset) {
             columns.push(dataset + "_" + column.getElementsByTagName("input")[0].getAttribute("value"));
         }
     }
+    let allTransformations = document.getElementsByClassName("form-group columns")[0].getElementsByClassName("control transformation");
+    for (let transformation of allTransformations) {
+        if (transformation.getElementsByTagName("input")[0].getAttribute("checked")) {
+            columns.push(transformation.getElementsByTagName("input")[0].getAttribute("value"));
+        }
+    }
     return columns;
 };
 
-CampusExplorer.buildGroup = function (dataset, std) {
+CampusExplorer.buildGroup = function (dataset) {
     let groups = [];
     let allGroups = document.getElementsByClassName("form-group groups")[0].getElementsByClassName("control field");
     for (let group of allGroups) {
         if (group.getElementsByTagName("input")[0].getAttribute("checked")) {
             const val = group.getElementsByTagName("input")[0].getAttribute("value");
-            if (std.includes(val)) {
-                groups.push(dataset + "_" + val);
-            } else {
-                groups.push(val);
-            }
+            groups.push(dataset + "_" + val);
         }
     }
     return groups;
 };
 
-CampusExplorer.buildOrder = function (dataset, std) {
+CampusExplorer.buildOrder = function (dataset) {
     let fields = [];
     let options = document.getElementsByClassName("form-group order")[0]
         .getElementsByClassName("control order fields")[0].getElementsByTagName("option");
     for (let option of options) {
         if (option.getAttribute("selected")) {
             const val = option.getAttribute("value");
-            if (std.includes(val)) {
-                fields.push(dataset + "_" + val);
-            } else {
+            if (option.hasAttribute("class")) {
                 fields.push(val);
+            } else {
+                fields.push(dataset + "_" + val);
             }
         }
     }
