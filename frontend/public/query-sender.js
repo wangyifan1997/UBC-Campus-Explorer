@@ -13,7 +13,7 @@ CampusExplorer.sendQuery = function (query) {
 
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status === 200) {
-                resolve(xmlHttpRequest.response.result);
+                fulfill(xmlHttpRequest.response.result);
             } else {
                 reject("response is not 200");
             }
