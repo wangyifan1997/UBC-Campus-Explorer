@@ -126,7 +126,7 @@ CampusExplorer.buildGroup = function (dataset, std) {
         if (group.getElementsByTagName("input")[0].getAttribute("checked")) {
             const val = group.getElementsByTagName("input")[0].getAttribute("value");
             if (std.includes(val)) {
-                group.push(dataset + "_" + val);
+                groups.push(dataset + "_" + val);
             } else {
                 groups.push(val);
             }
