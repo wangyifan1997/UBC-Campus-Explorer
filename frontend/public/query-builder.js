@@ -44,7 +44,7 @@ CampusExplorer.buildOptions = function (dataset) {
 };
 
 CampusExplorer.buildWhere = function (dataset) {
-    let conds = document.getElementsByClassName("control-group condition");
+    let conds = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control-group condition");
     let result = [];
     for (let cond of conds) {
         this.buildSingleCond(dataset, cond, result);
@@ -54,9 +54,9 @@ CampusExplorer.buildWhere = function (dataset) {
     } else if (result.length === 1) {
         return result[0];
     } else {
-        let all = document.getElementsByClassName("control conditions-all-radio")[0].getElementsByTagName("input")[0].getAttribute("checked");
-        let any = document.getElementsByClassName("control conditions-any-radio")[0].getElementsByTagName("input")[0].getAttribute("checked");
-        let none = document.getElementsByClassName("control conditions-none-radio")[0].getElementsByTagName("input")[0].getAttribute("checked");
+        let all = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-all-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
+        let any = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-any-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
+        let none = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-none-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
         if (all) {
             return {AND: result};
         } else if (any) {
@@ -85,7 +85,7 @@ CampusExplorer.buildSingleCond = function (dataset, cond, result) {
         }
     }
     if (operator === "EQ" || operator === "GT" || operator === "LT") {
-        if (!(val === null || val.trim(" ").length === 0 || Number.isNaN(Number(val)))) {
+        if (!(val === null || val.trim().length === 0 || Number.isNaN(Number(val)))) {
             val = Number(val);
         }
     }
@@ -102,13 +102,13 @@ CampusExplorer.buildSingleCond = function (dataset, cond, result) {
 
 CampusExplorer.buildColumns = function (dataset) {
     let columns = [];
-    let allColumns = document.getElementsByClassName("form-group columns")[0].getElementsByClassName("control field");
+    let allColumns = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("form-group columns")[0].getElementsByClassName("control field");
     for (let column of allColumns) {
         if (column.getElementsByTagName("input")[0].getAttribute("checked")) {
             columns.push(dataset + "_" + column.getElementsByTagName("input")[0].getAttribute("value"));
         }
     }
-    let allTransformations = document.getElementsByClassName("form-group columns")[0].getElementsByClassName("control transformation");
+    let allTransformations = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("form-group columns")[0].getElementsByClassName("control transformation");
     for (let transformation of allTransformations) {
         if (transformation.getElementsByTagName("input")[0].getAttribute("checked")) {
             columns.push(transformation.getElementsByTagName("input")[0].getAttribute("value"));
@@ -119,7 +119,7 @@ CampusExplorer.buildColumns = function (dataset) {
 
 CampusExplorer.buildGroup = function (dataset) {
     let groups = [];
-    let allGroups = document.getElementsByClassName("form-group groups")[0].getElementsByClassName("control field");
+    let allGroups = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("form-group groups")[0].getElementsByClassName("control field");
     for (let group of allGroups) {
         if (group.getElementsByTagName("input")[0].getAttribute("checked")) {
             const val = group.getElementsByTagName("input")[0].getAttribute("value");
@@ -131,7 +131,7 @@ CampusExplorer.buildGroup = function (dataset) {
 
 CampusExplorer.buildOrder = function (dataset) {
     let fields = [];
-    let options = document.getElementsByClassName("form-group order")[0]
+    let options = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("form-group order")[0]
         .getElementsByClassName("control order fields")[0].getElementsByTagName("option");
     for (let option of options) {
         if (option.getAttribute("selected")) {
@@ -146,7 +146,7 @@ CampusExplorer.buildOrder = function (dataset) {
     if (fields.length === 0) {
         return {};
     } else {
-        let isDescending = document.getElementsByClassName("control descending")[0].getElementsByTagName("input")[0].getAttribute("checked");
+        let isDescending = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control descending")[0].getElementsByTagName("input")[0].getAttribute("checked");
         if (isDescending) {
             return {dir: "DOWN", keys: fields};
         } else {
@@ -157,7 +157,7 @@ CampusExplorer.buildOrder = function (dataset) {
 
 CampusExplorer.buildApply = function (dataset) {
     let result = [];
-    let rules = document.getElementsByClassName("control-group transformation");
+    let rules = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control-group transformation");
     for (let rule of rules) {
         this.buildSingleRule(dataset, rule, result);
     }
