@@ -88,10 +88,9 @@ CampusExplorer.buildSingleCond = function (dataset, cond, result) {
         if (!(val === null || val.trim().length === 0 || Number.isNaN(Number(val)))) {
             val = Number(val);
         }
-        // TODO should I uncomment this?
-        if (val === null) {
-            val = "";
-        }
+    }
+    if (val === null) {
+        val = "";
     }
     let res0 = {};
     res0[field] = val;
