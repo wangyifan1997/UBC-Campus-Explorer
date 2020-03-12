@@ -5,9 +5,11 @@ import chai = require("chai");
 import chaiHttp = require("chai-http");
 import Response = ChaiHttp.Response;
 import {expect} from "chai";
+import Log from "../src/Util";
+import * as fs from "fs-extra";
 
 describe("Facade D3", function () {
-
+    const cacheDir = __dirname + "/../data";
     let facade: InsightFacade = null;
     let server: Server = null;
 
@@ -16,32 +18,48 @@ describe("Facade D3", function () {
     before(function () {
         facade = new InsightFacade();
         server = new Server(4321);
-        // TODO: start server here once and handle errors properly
+        server.start().then(function (val: boolean) {
+            Log.info("App::initServer() - started: " + val);
+        }).catch(function (err: Error) {
+            Log.error("App::initServer() - ERROR: " + err.message);
+        });
     });
 
     after(function () {
-        // TODO: stop server here once!
+        server.stop().then((result: boolean) => {
+            Log.info("Server::stop() - stopped");
+        });
     });
 
     beforeEach(function () {
-        // might want to add some process logging here to keep track of what"s going on
+        server.stop();
+        server.start().then(function (val: boolean) {
+            Log.info("App::initServer() - started: " + val);
+        }).catch(function (err: Error) {
+            Log.error("App::initServer() - ERROR: " + err.message);
+        });
     });
 
     afterEach(function () {
-        // might want to add some process logging here to keep track of what"s going on
+        try {
+            fs.removeSync(cacheDir);
+            fs.mkdirSync(cacheDir);
+        } catch (err) {
+            Log.error(err);
+        }
     });
 
     // Sample on how to format PUT requests
-    /*
+
     it("PUT test for courses dataset", function () {
         try {
-            return chai.request(SERVER_URL)
-                .put(ENDPOINT_URL)
-                .send(ZIP_FILE_DATA)
+            let file = fs.readFileSync("./test/data/courses.zip");
+            return chai.request("http://localhost:4321")
+                .put("/dataset/courses/courses")
+                .send(file)
                 .set("Content-Type", "application/x-zip-compressed")
                 .then(function (res: Response) {
-                    // some logging here please!
-                    expect(res.status).to.be.equal(204);
+                    expect(res.status).to.be.equal(200);
                 })
                 .catch(function (err) {
                     // some logging here please!
@@ -49,9 +67,9 @@ describe("Facade D3", function () {
                 });
         } catch (err) {
             // and some more logging here!
+            expect.fail();
         }
     });
-    */
 
     // The other endpoints work similarly. You should be able to find all instructions at the chai-http documentation
 });
