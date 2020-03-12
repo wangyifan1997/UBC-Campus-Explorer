@@ -10,6 +10,8 @@ export default class Scheduler implements IScheduler {
 
         let unschedRooms: SchedRoom[] = rooms;
         let unschedSections: SchedSection[] = sections;
+        // this.deleteDuplicate(unschedRooms);
+        // this.deleteDuplicate(unschedSections);
         let schedBuildings: string[] = []; // can be local in function
         let groupedRoom: any = {};
         let timeTable: any = this.initTimeTable();
@@ -40,14 +42,18 @@ export default class Scheduler implements IScheduler {
     private allocateRooms(timeTable: any, unschedRooms: SchedRoom[], maxRegisters: number[]): void {
         timeTable["roomOfColumn"] = [];
         while (maxRegisters.length > 0 && unschedRooms.length > 0) {
+            let haveValidRooms: boolean = false;
             for (let aRoom of unschedRooms) {
                 if (maxRegisters[0] <= this.getRoomCapacity(aRoom)) {
+                    haveValidRooms = true;
                     timeTable["roomOfColumn"].push(aRoom);
                     maxRegisters.shift();
                     unschedRooms.splice(unschedRooms.indexOf(aRoom), 1);
                     break;
                 }
-
+            }
+            if (!haveValidRooms) {
+                break;
             }
         }
     }
@@ -109,6 +115,9 @@ export default class Scheduler implements IScheduler {
     private deleteExtraSections(unschedSections: SchedSection[], timeTable: any): void {
         while (this.isTooManySections(unschedSections[0], timeTable)) {
             unschedSections.shift();
+            if (unschedSections.length === 0) {
+                break;
+            }
         }
     }
 
@@ -150,6 +159,21 @@ export default class Scheduler implements IScheduler {
         };
     }
 
+    // private deleteDuplicate(list: any[]): void {
+    //     for (let element of list) {
+    //         for (let element2 of list) {
+    //             if (this.isDuplicate(element, element2)) {
+    //                 list.splice(list.indexOf(element2), 1);
+    //             }
+    //         }
+    //     }
+    // }
+    //
+    // private isDuplicate(a: any, b: any): boolean {
+    //     return (a["courses_uuid"] === b["courses_uuid"] && a["rooms_shortname"] === b["rooms_shortname"]
+    //         && a["rooms_number"] === b["rooms_number"]);
+    // }
+
     private groupRooms(groupedRoom: any, allRooms: SchedRoom[]): void {
         for (let room of allRooms) {
             if (!Object.keys(groupedRoom).includes(room["rooms_shortname"])) {
@@ -166,8 +190,9 @@ export default class Scheduler implements IScheduler {
     }
 
     private isSameCourse(sectionA: SchedSection, sectionB: SchedSection): boolean {
-        return (sectionA["courses_dept"] === sectionA["courses_dept"] &&
-            sectionB["courses_id"] === sectionB["courses_id"]);
+
+        return (sectionA["courses_dept"] === sectionB["courses_dept"] &&
+            sectionA["courses_id"] === sectionB["courses_id"]);
     }
 
     private getEnrollment(section: SchedSection): number {
