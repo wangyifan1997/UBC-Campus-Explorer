@@ -85,7 +85,7 @@ CampusExplorer.buildSingleCond = function (dataset, cond, result) {
         }
     }
     if (operator === "EQ" || operator === "GT" || operator === "LT") {
-        if (!(val === null || val.trim(" ").length === 0 || Number.isNaN(Number(val)))) {
+        if (!(val === null || val.trim().length === 0 || Number.isNaN(Number(val)))) {
             val = Number(val);
         }
     }
