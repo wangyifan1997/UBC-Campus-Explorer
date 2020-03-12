@@ -127,7 +127,8 @@ export default class Server {
     }
 
     private performQuery(req: restify.Request, res: restify.Response, next: restify.Next) {
-        let query: any = JSON.parse(req.body);
+        // let query: any = JSON.parse(req.body);
+        let query: any = req.body;
         this.insightFacade.performQuery(query).then((arr: any[]) => {
             res.json(200, {result: arr});
         }).catch((err) => {

@@ -21,9 +21,10 @@ CampusExplorer.buildQuery = function () {
     let transformations = this.buildTransformations(dataset, fields);
     query["WHERE"] = where;
     query["OPTIONS"] = options;
-    if (Object.keys(transformations) !== 0) {
+    if (Object.keys(transformations).length !== 0) {
         query["TRANSFORMATIONS"] = transformations;
     }
+    console.log(query["TRANSFORMATIONS"]);
     return query;
 };
 
@@ -37,6 +38,7 @@ CampusExplorer.buildTransformations = function (dataset, fields) {
     if (apply.length !== 0) {
         result["APPLY"] = apply;
     }
+    console.log(result);
     return result;
 };
 
@@ -45,7 +47,7 @@ CampusExplorer.buildOptions = function (dataset, fields) {
     let order = this.buildOrder(dataset, fields);
     let result = {};
     result["COLUMNS"] = columns;
-    if (Object.keys(order) !== 0) {
+    if (Object.keys(order).length !== 0) {
         result["ORDER"] = order;
     }
     return result;

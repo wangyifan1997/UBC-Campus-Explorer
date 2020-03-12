@@ -8,7 +8,9 @@ describe("buildQuery test suite", function () {
                 it(`~Bee${queryName}~Should be able to build a ${queryDescriptions[queryName]}`, function () {
                     TTT.insertHtmlFixture(queryName);
                     let actualQuery = CampusExplorer.buildQuery();
+                    console.log(actualQuery);
                     let expectedQuery = queryFixtures[queryName];
+                    console.log(expectedQuery);
                     expect(actualQuery).to.equalQuery(expectedQuery);
                 });
             }
