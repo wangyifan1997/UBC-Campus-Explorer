@@ -30,7 +30,7 @@ CampusExplorer.buildQuery = function () {
 CampusExplorer.buildTransformations = function (dataset, fields) {
     let group = this.buildGroup(dataset, fields);
     let apply = this.buildApply(dataset);
-    let result = {}
+    let result = {};
     if (group.length !== 0) {
         result["GROUP"] = group;
     }
@@ -38,7 +38,7 @@ CampusExplorer.buildTransformations = function (dataset, fields) {
         result["APPLY"] = apply;
     }
     return result;
-}
+};
 
 CampusExplorer.buildOptions = function (dataset, fields) {
     let columns = this.buildColumns(dataset);
@@ -49,7 +49,7 @@ CampusExplorer.buildOptions = function (dataset, fields) {
         result["ORDER"] = order;
     }
     return result;
-}
+};
 
 CampusExplorer.buildWhere = function (dataset) {
     let conds = document.getElementsByClassName("control-group condition");
