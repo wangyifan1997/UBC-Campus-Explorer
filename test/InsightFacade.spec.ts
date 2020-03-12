@@ -87,11 +87,7 @@ export interface ITestQuery {
 //                 rooms.push(roomTemplate);
 //             }
 //         }
-//         // eslint-disable-next-line no-console
-//         console.log("sections: " + sections + "\nrooms: " + rooms);
 //         let result: Array<[SchedRoom, SchedSection, TimeSlot]> = scheduler.schedule(sections, rooms);
-//         // eslint-disable-next-line no-console
-//         console.log(result);
 //         expect(result).not.to.deep.equal([]);
 //     });
 // });
