@@ -9,13 +9,14 @@ CampusExplorer.sendQuery = function (query) {
         const url = "http://localhost:4321/query";
         let xmlHttpRequest = new XMLHttpRequest();
         xmlHttpRequest.open("POST", url);
+        xmlHttpRequest.setRequestHeader("Content-Type", "application/json");
         xmlHttpRequest.send(JSON.stringify(query));
 
         xmlHttpRequest.onload = function () {
             if (xmlHttpRequest.status === 200) {
-                fulfill(xmlHttpRequest.response.result);
+                fulfill(JSON.parse(xmlHttpRequest.response));
             } else {
-                reject("response is not 200");
+                reject(JSON.parse(xmlHttpRequest.response));
             }
         };
 

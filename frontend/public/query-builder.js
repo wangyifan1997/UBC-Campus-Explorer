@@ -89,6 +89,9 @@ CampusExplorer.buildSingleCond = function (dataset, cond, result) {
             val = Number(val);
         }
     }
+    if (val === null) {
+        val = "";
+    }
     let res0 = {};
     res0[field] = val;
     let res1 = {};
