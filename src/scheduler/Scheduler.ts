@@ -10,9 +10,6 @@ export default class Scheduler implements IScheduler {
 
         let unschedRooms: SchedRoom[] = rooms;
         let unschedSections: SchedSection[] = sections;
-        // this.deleteDuplicate(unschedRooms);
-        // this.deleteDuplicate(unschedSections);
-        let schedBuildings: string[] = []; // can be local in function
         let groupedRoom: any = {};
         let timeTable: any = this.initTimeTable();
         let maxRegisters: number[] = [];
@@ -30,8 +27,8 @@ export default class Scheduler implements IScheduler {
         let size: number = timeTable["roomOfColumn"].length;
         for (let i: number = 0; i < size; i++) {
             for (let key of Object.keys(timeTable)) {
-                if (key !== "roomOfColumn" && timeTable[key][i] !== undefined
-                    && timeTable["roomOfColumn"][i] !== undefined) {
+                if (key !== "roomOfColumn" && timeTable[key][i] !== null && typeof timeTable[key][i] !== "undefined"
+                    && timeTable["roomOfColumn"][i] !== null && typeof timeTable["roomOfColumn"][i] !== "undefined") {
                     result.push([timeTable["roomOfColumn"][i] as SchedRoom,
                         timeTable[key][i] as SchedSection, key as TimeSlot]);
                 }
@@ -39,22 +36,20 @@ export default class Scheduler implements IScheduler {
         }
     }
 
+    // does not allocate
     private allocateRooms(timeTable: any, unschedRooms: SchedRoom[], maxRegisters: number[]): void {
         timeTable["roomOfColumn"] = [];
-        while (maxRegisters.length > 0 && unschedRooms.length > 0) {
-            let haveValidRooms: boolean = false;
-            for (let aRoom of unschedRooms) {
-                if (maxRegisters[0] <= this.getRoomCapacity(aRoom)) {
-                    haveValidRooms = true;
-                    timeTable["roomOfColumn"].push(aRoom);
-                    maxRegisters.shift();
-                    unschedRooms.splice(unschedRooms.indexOf(aRoom), 1);
+        let columnCounter: number = 0;
+        for (let register of maxRegisters) {
+            timeTable["roomOfColumn"].push(null);
+            for (let room of unschedRooms) {
+                if (register <= this.getRoomCapacity(room)) {
+                    timeTable["roomOfColumn"][columnCounter] = room;
+                    unschedRooms.splice(unschedRooms.indexOf(room), 1);
                     break;
                 }
             }
-            if (!haveValidRooms) {
-                break;
-            }
+            columnCounter++;
         }
     }
 
@@ -84,6 +79,7 @@ export default class Scheduler implements IScheduler {
                 }
                 this.deleteExtraSections(unschedSections, timeTable);
             } else {
+                timeTable[key].push(null);
                 skippedTimeSlots.push([currColumn, key]);
             }
         }
@@ -95,7 +91,7 @@ export default class Scheduler implements IScheduler {
             let filledTimeSlot: boolean = false;
             for (let timeSlot of skippedTimeSlots) {
                 if (!this.isCourseConflict(unschedSections[0], timeTable[timeSlot[1]])) {
-                    timeTable[timeSlot[1]].splice(timeSlot[0], 0, unschedSections[0]);
+                    timeTable[timeSlot[1]][timeSlot[0]] = unschedSections[0];
                     unschedSections.shift();
                     if (unschedSections.length === 0) {
                         break;
@@ -190,9 +186,16 @@ export default class Scheduler implements IScheduler {
     }
 
     private isSameCourse(sectionA: SchedSection, sectionB: SchedSection): boolean {
-
-        return (sectionA["courses_dept"] === sectionB["courses_dept"] &&
-            sectionA["courses_id"] === sectionB["courses_id"]);
+        // if ((sectionA !== null && typeof sectionA !== "undefined") &&
+        //     (sectionB !== null && typeof sectionB !== "undefined")) {
+        //     return (sectionA["courses_dept"] === sectionB["courses_dept"] &&
+        //         sectionA["courses_id"] === sectionB["courses_id"]);
+        // }
+        // return false;
+        return sectionA !== null && typeof sectionA !== "undefined"
+            && sectionB !== null && typeof sectionB !== "undefined"
+            && sectionA["courses_dept"] === sectionB["courses_dept"] &&
+            sectionA["courses_id"] === sectionB["courses_id"];
     }
 
     private getEnrollment(section: SchedSection): number {
