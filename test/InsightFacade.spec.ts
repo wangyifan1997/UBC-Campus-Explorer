@@ -785,6 +785,7 @@ describe("InsightFacade PerformQuery", () => {
     //     }).then(() => {
     //         result = scheduler.schedule(sections, rooms);
     //         Log.test(result);
+    //         Log.test(result.length);
     //     });
     // });
 
