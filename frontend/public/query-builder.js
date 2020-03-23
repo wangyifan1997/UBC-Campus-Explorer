@@ -49,20 +49,24 @@ CampusExplorer.buildWhere = function (dataset) {
     for (let cond of conds) {
         this.buildSingleCond(dataset, cond, result);
     }
+    let all = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-all-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
+    let any = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-any-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
+    let none = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-none-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
     if (result.length === 0) {
         return {};
     } else if (result.length === 1) {
-        return result[0];
+        if (none) {
+            return {NOT: result[0]};
+        } else {
+            return result[0];
+        }
     } else {
-        let all = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-all-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
-        let any = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-any-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
-        let none = document.getElementsByClassName("tab-panel active")[0].getElementsByClassName("control conditions-none-radio")[0].getElementsByTagName("input")[0].hasAttribute("checked");
         if (all) {
             return {AND: result};
         } else if (any) {
             return {OR: result};
         } else {
-            return {NOT: {AND: result}};
+            return {NOT: {OR: result}};
         }
     }
 };
