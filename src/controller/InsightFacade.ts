@@ -18,8 +18,6 @@ import QueryFinder from "./QueryFinder";
  *
  */
 
-// dev branch
-// muhan branch change
 export default class InsightFacade implements IInsightFacade {
     private dataHandler: DataHandler;
 

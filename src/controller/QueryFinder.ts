@@ -235,7 +235,7 @@ export default class QueryFinder {
             }
         } else if (str.slice(0, 1) === "*") {
             for (let section of allSections) {
-                if (section[skey].endsWith(str.slice(1,))) {
+                if (section[skey].endsWith(str.slice(1, ))) {
                     result.push(section);
                 }
             }
