@@ -5,20 +5,24 @@ export default class QueryFinder {
     private idInQuery: string;
     private allDataset: any;
 
-    constructor() {
-        this.idInQuery = "";
-        this.allDataset = null;
+    constructor(id: string, dataset: { [index: string]: any }) {
+        this.idInQuery = id;
+        this.allDataset = dataset;
     }
 
-    public findMatchingSections(q: any): Promise<any[]> {
+    public find(q: any): any[] {
+        return this.findMatchingSections(q);
+    }
+
+    private findMatchingSections(q: any): any[] {
         let los: any[] = this.findMatchingWhere(q.WHERE);
         if (typeof q.TRANSFORMATIONS !== "undefined") {
             los = this.findTransformations(q.TRANSFORMATIONS, los);
         }
         if (los.length > 5000) {
-            return Promise.reject(new ResultTooLargeError());
+            throw new ResultTooLargeError();
         } else {
-            return Promise.resolve(this.findMatchingOPTIONS(q.OPTIONS, los));
+            return this.findMatchingOPTIONS(q.OPTIONS, los);
         }
     }
 
@@ -231,7 +235,7 @@ export default class QueryFinder {
             }
         } else if (str.slice(0, 1) === "*") {
             for (let section of allSections) {
-                if (section[skey].endsWith(str.slice(1, ))) {
+                if (section[skey].endsWith(str.slice(1,))) {
                     result.push(section);
                 }
             }
@@ -249,13 +253,5 @@ export default class QueryFinder {
             }
         }
         return result;
-    }
-
-    public setAllDataset(data: any) {
-        this.allDataset = data;
-    }
-
-    public setidInQuery(id: string) {
-        this.idInQuery = id;
     }
 }
