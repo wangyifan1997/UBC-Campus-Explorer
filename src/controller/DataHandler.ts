@@ -1,4 +1,4 @@
-import {GeoResponse, InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
+import {InsightDataset, InsightDatasetKind, InsightError, NotFoundError} from "./IInsightFacade";
 import * as JSZip from "jszip";
 import {JSZipObject} from "jszip";
 import * as fs from "fs-extra";
@@ -62,7 +62,6 @@ export default class DataHandler {
 
     public myLoadAsync(content: string) {
         try {
-            // this.resetZip();
             let zip: JSZip = new JSZip();
             return zip.loadAsync(content, {base64: true});
         } catch (e) {

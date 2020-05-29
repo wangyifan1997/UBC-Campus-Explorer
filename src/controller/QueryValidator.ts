@@ -1,12 +1,14 @@
-import {InsightDataset, InsightDatasetKind} from "./IInsightFacade";
+import {InsightDataset, InsightDatasetKind, InsightError} from "./IInsightFacade";
 
 export default class QueryValidator {
-    private coursemfields: string[] = ["avg", "pass", "fail", "audit", "year"];
-    private coursesfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
-    private roommfields: string[] = ["lat", "lon", "seats"];
-    private roomsfields: string[] = ["fullname", "shortname", "number", "name", "address", "type", "furniture", "href"];
-    private mtoken: string[] = ["MAX", "MIN", "AVG", "SUM"];
-    private mstoken: string[] = ["COUNT"];
+    private readonly coursemfields: string[] = ["avg", "pass", "fail", "audit", "year"];
+    private readonly coursesfields: string[] = ["dept", "id", "instructor", "title", "uuid"];
+    private readonly roommfields: string[] = ["lat", "lon", "seats"];
+    private readonly roomsfields: string[] = ["fullname", "shortname", "number"
+        , "name", "address", "type", "furniture", "href"];
+
+    private readonly mtoken: string[] = ["MAX", "MIN", "AVG", "SUM"];
+    private readonly mstoken: string[] = ["COUNT"];
     private idInQuery: string[]; // make sure the query only has one id
     private keysInQuery: string[]; // all keys appeared in columns after being validated
     private transformationKey: string[]; // keys appeared in transformation, if there is a transformation
@@ -14,235 +16,249 @@ export default class QueryValidator {
     private mfields: string[];
     private sfields: string[];
 
-    constructor() {
+    constructor(insightDatasets: InsightDataset[]) {
         this.idInQuery = [];
         this.keysInQuery = [];
         this.transformationKey = [];
-        this.allInsightDataset = [];
+        this.allInsightDataset = insightDatasets;
     }
 
-    public validateTransformations(q: any): boolean {
-        if (typeof q.GROUP === "undefined" || typeof q.APPLY === "undefined" || Object.keys(q).length !== 2) {
-            return false;
+    public validate(q: any): void {
+        if (!q || !q.WHERE || !q.OPTIONS) {
+            throw new InsightError();
         }
-        return this.validateGROUP(q.GROUP) && this.validateAPPLY(q.APPLY);
+        for (let key of Object.keys(q)) {
+            if (key !== "OPTIONS" && key !== "WHERE" && key !== "TRANSFORMATIONS") {
+                throw new InsightError();
+            }
+        }
+        this.validateWhere(q.WHERE);
+        if (q.TRANSFORMATIONS) {
+            this.validateTransformations(q.TRANSFORMATIONS);
+        }
+        this.validateOptions(q.OPTIONS);
     }
 
-    private validateGROUP(q: any): boolean {
+    public validateTransformations(q: any): void {
+        if (typeof q.GROUP === "undefined" || typeof q.APPLY === "undefined" || Object.keys(q).length !== 2) {
+            throw new InsightError();
+        }
+        this.validateGROUP(q.GROUP);
+        this.validateAPPLY(q.APPLY);
+    }
+
+    private validateGROUP(q: any): void {
         if (!Array.isArray(q) || q.length < 1) {
-            return false; // q should be an object, and should has at least one element
+            throw new InsightError(); // q should be an object, and should has at least one element
         }
         for (let key of q) {
-            let splittedKey: string[] = key.split("_");
-            if (splittedKey.length !== 2) {
-                return false;
-            }
-            if (!(this.validateIdstring(splittedKey[0])
-                && (this.mfields.includes(splittedKey[1]) || this.sfields.includes(splittedKey[1])))) {
-                return false;
-            }
+            this.validateKey(key);
             this.transformationKey.push(key); // if the key is valid, push it to transformationKey
         }
-        return true;
     }
 
-    private validateAPPLY(q: any): boolean {
+    private validateKey(key: string): void {
+        let splittedKey: string[] = key.split("_");
+        if (splittedKey.length !== 2) {
+            throw new InsightError();
+        }
+        if (!(this.validateIdstring(splittedKey[0])
+            && (this.mfields.includes(splittedKey[1]) || this.sfields.includes(splittedKey[1])))) {
+            throw new InsightError();
+        }
+    }
+
+    private validateAPPLY(q: any): void {
         if (!Array.isArray(q)) {
-            return false; // q should be an array, and should have at least one element
+            throw new InsightError(); // q should be an array, and should have at least one element
         }
         for (let applyrule of q) {
             if (Array.isArray(applyrule) || Object.keys(applyrule).length > 1) {
-                return false;
+                throw new InsightError();
             }
             let applykey: string = Object.keys(applyrule)[0];
-            let criteria: any = applyrule[applykey];
+            let criteria = applyrule[applykey];
             if (applykey.length === 0 || applykey.includes("_") || this.transformationKey.includes(applykey)) {
-                return false;
+                throw new InsightError();
             }
             this.transformationKey.push(applykey);
             if (Array.isArray(criteria) || Object.keys(criteria).length > 1) {
-                return false;
+                throw new InsightError();
             }
             let applytoken: string = Object.keys(criteria)[0];
             if (!this.mtoken.includes(applytoken) && !this.mstoken.includes(applytoken)) {
-                return false;
+                throw new InsightError();
             }
             let key: string[] = criteria[applytoken].split("_");
             if (key.length !== 2) {
-                return false;
+                throw new InsightError();
             }
             if (this.mtoken.includes(applytoken)) {
                 if (!(this.validateIdstring(key[0]) && this.mfields.includes(key[1]))) {
-                    return false;
+                    throw new InsightError();
                 }
             } else if (this.mstoken.includes(applytoken)) {
                 if (!(this.validateIdstring(key[0])
                     && (this.sfields.includes(key[1]) || this.mfields.includes(key[1])))) {
-                    return false;
+                    throw new InsightError();
                 }
             }
         }
-        return true;
     }
 
 
-    public validateOptions(q: any): boolean {
+    public validateOptions(q: any): void {
         let keys: any[] = Object.keys(q);
         for (let key of keys) {
             if (key !== "COLUMNS" && key !== "ORDER") {
-                return false;
+                throw new InsightError();
             }
         }
-        if (typeof q.ORDER !== "undefined") {
-            return this.validateColumns(q.COLUMNS) && this.validateOrder(q.ORDER);
-        } else {
-            return this.validateColumns(q.COLUMNS);
+        this.validateColumns(q.COLUMNS);
+        if (q.ORDER) {
+            this.validateOrder(q.ORDER);
         }
     }
 
-    private validateColumns(q: any): boolean {
-        if (typeof q === "undefined" || q.length < 1) {
-            return false;
+    private validateColumns(q: any): void {
+        if (!q || q.length < 1) {
+            throw new InsightError();
         }
         for (let mskey of q) {
             if (this.transformationKey.length > 0) {
                 if (!this.transformationKey.includes(mskey)) {
-                    return false;
+                    throw new InsightError();
                 }
             } else {
-                let splittedmskeys: string[] = mskey.split("_");
-                if (splittedmskeys.length !== 2) {
-                    return false;
-                }
-                if (!(this.validateIdstring(splittedmskeys[0])
-                    && (this.mfields.includes(splittedmskeys[1]) || this.sfields.includes(splittedmskeys[1])))) {
-                    return false;
-                }
+                this.validateKey(mskey);
             }
             this.keysInQuery.push(mskey);
         }
-        return true;
     }
 
-    private validateOrder(q: any): boolean {
-        if (typeof q === "string") {
-            return this.keysInQuery.includes(q);
-        } else if (Array.isArray(q)) {
-            return false;
+    private validateOrder(q: any): void {
+        if (Array.isArray(q)) {
+            throw new InsightError();
+        } else if (typeof q === "string") {
+            if (!this.keysInQuery.includes(q)) {
+                throw new InsightError();
+            }
         } else {
-            if (typeof q.dir === "undefined" || typeof q.keys === "undefined" || Object.keys(q).length !== 2) {
-                return false;
+            if (!q.dir || !q.keys || Object.keys(q).length !== 2) {
+                throw new InsightError();
             }
             if (q.dir !== "UP" && q.dir !== "DOWN") {
-                return false;
+                throw new InsightError();
             }
             let keys: any = q.keys;
             if (!Array.isArray(keys) || keys.length < 1) {
-                return false;
+                throw new InsightError();
             }
             for (let anykey of keys) {
                 if (!this.keysInQuery.includes(anykey)) {
-                    return false;
+                    throw new InsightError();
                 }
             }
-            return true;
         }
     }
 
-    public validateWhere(q: any): boolean {
+    public validateWhere(q: any): void {
         if (Array.isArray(q)) {
-            return false;
+            throw new InsightError();
         } else {
-            if (Object.keys(q).length === 0) {
-                return true;
-            } else {
-                return this.validateFilter(q);
+            if (Object.keys(q).length !== 0) {
+                this.validateFilter(q);
             }
         }
     }
 
-    private validateFilter(q: any): boolean {
+    private validateFilter(q: any): void {
         if (Object.keys(q).length !== 1) {
-            return false;
+            throw new InsightError();
         } else {
             let key: string = Object.keys(q)[0];
             let value: any = Object.values(q)[0];
             switch (key) {
                 case "AND":
                 case "OR":
-                    return this.validateANDOR(value);
+                    this.validateANDOR(value);
+                    break;
                 case "NOT":
-                    return this.validateNOT(value);
+                    this.validateNOT(value);
+                    break;
                 case "GT":
                 case "LT":
                 case "EQ":
-                    return this.validateGTLTEQ(value);
+                    this.validateGTLTEQ(value);
+                    break;
                 case "IS":
-                    return this.validateIS(value);
+                    this.validateIS(value);
+                    break;
                 default:
-                    return false;
+                    throw new InsightError();
             }
         }
     }
 
-    private validateNOT(value: any): boolean {
+    private validateNOT(value: any): void {
         if (typeof value !== "object") {
-            return false;
+            throw new InsightError();
         }
-        return this.validateFilter(value);
+        this.validateFilter(value);
     }
 
-    private validateIS(value: any): boolean {
+    private validateIS(value: any): void {
         if (typeof value !== "object") {
-            return false;
+            throw new InsightError();
         }
         if (Object.keys(value).length !== 1) {
-            return false;
+            throw new InsightError();
         }
         let skey: string[] = Object.keys(value)[0].split("_");
         if (skey.length !== 2) {
-            return false;
+            throw new InsightError();
         } else {
             let idstring: string = skey[0];
             let sfield: string = skey[1];
             let str: any = Object.values(value)[0];
             if (typeof str !== "string") {
-                return false;
+                throw new InsightError();
             } else {
-                return (!str.slice(1, -1).includes("*"))
-                    && this.validateIdstring(idstring)
-                    && this.sfields.includes(sfield);
+                if ((str.slice(1, -1).includes("*"))
+                    || !this.validateIdstring(idstring)
+                    || !this.sfields.includes(sfield)) {
+                    throw new InsightError();
+                }
             }
         }
     }
 
-    private validateGTLTEQ(value: any): boolean {
+    private validateGTLTEQ(value: any): void {
         if (typeof value !== "object" || Object.keys(value).length !== 1) {
-            return false;
+            throw new InsightError();
         }
         let mkey: string[] = Object.keys(value)[0].split("_");
         if (mkey.length !== 2) {
-            return false;
+            throw new InsightError();
         } else {
             let idstring: string = mkey[0];
             let mfield: string = mkey[1];
             let num: any = Object.values(value)[0];
-            return (typeof num === "number")
-                && this.validateIdstring(idstring)
-                && this.mfields.includes(mfield);
+            if ((typeof num !== "number")
+                || !this.validateIdstring(idstring)
+                || !this.mfields.includes(mfield)) {
+                throw new InsightError();
+            }
         }
     }
 
-    private validateANDOR(value: any): boolean {
+    private validateANDOR(value: any): void {
         if (!Array.isArray(value) || value.length < 1) {
-            return false;
+            throw new InsightError();
         }
         for (let innerObject of value) {
-            if (!this.validateFilter(innerObject)) {
-                return false;
-            }
+            this.validateFilter(innerObject);
         }
-        return true;
     }
 
     private validateIdstring(idstring: string): boolean {
@@ -268,21 +284,5 @@ export default class QueryValidator {
 
     public getIdInQuery(): string[] {
         return this.idInQuery;
-    }
-
-    public setIdInQuery(id: string[]) {
-        this.idInQuery = id;
-    }
-
-    public setKeysInQuery(field: string[]) {
-        this.keysInQuery = field;
-    }
-
-    public setTransformationKey(key: string[]) {
-        this.transformationKey = key;
-    }
-
-    public setAllInsightDataset(allInsightDataset: InsightDataset[]) {
-        this.allInsightDataset = allInsightDataset;
     }
 }

@@ -18,8 +18,6 @@ import QueryFinder from "./QueryFinder";
  *
  */
 
-// dev branch
-// muhan branch change
 export default class InsightFacade implements IInsightFacade {
     private dataHandler: DataHandler;
 
@@ -100,33 +98,11 @@ export default class InsightFacade implements IInsightFacade {
 
     public performQuery(query: any): Promise<any[]> {
         try {
-            if (query === null || typeof query.WHERE === "undefined"
-                || typeof query.OPTIONS === "undefined") {
-                return Promise.reject(new InsightError());
-            }
-            for (let key of Object.keys(query)) {
-                if (key !== "OPTIONS" && key !== "WHERE" && key !== "TRANSFORMATIONS") {
-                    return Promise.reject(new InsightError());
-                }
-            }
-            let queryValidator: QueryValidator = new QueryValidator();
-            queryValidator.setAllInsightDataset(this.dataHandler.getAllInsightDataset());
-            if (typeof query.TRANSFORMATIONS !== "undefined") {
-                if (!(queryValidator.validateWhere(query.WHERE)
-                    && queryValidator.validateTransformations(query.TRANSFORMATIONS)
-                    && queryValidator.validateOptions(query.OPTIONS))) {
-                    return Promise.reject(new InsightError());
-                }
-            } else {
-                if (!(queryValidator.validateWhere(query.WHERE)
-                    && queryValidator.validateOptions(query.OPTIONS))) {
-                    return Promise.reject(new InsightError());
-                }
-            }
-            let queryFinder: QueryFinder = new QueryFinder();
-            queryFinder.setAllDataset(this.dataHandler.getAllDataset());
-            queryFinder.setidInQuery(queryValidator.getIdInQuery()[0]);
-            return queryFinder.findMatchingSections(query);
+            const validator: QueryValidator = new QueryValidator(this.dataHandler.getAllInsightDataset());
+            validator.validate(query);
+            const finder: QueryFinder = new QueryFinder(validator.getIdInQuery()[0], this.dataHandler.getAllDataset());
+            const result: any[] = finder.find(query);
+            return Promise.resolve(result);
         } catch (err) {
             if (!(err instanceof InsightError) && !(err instanceof ResultTooLargeError)) {
                 return Promise.reject(new InsightError());
